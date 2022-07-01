@@ -1,0 +1,112 @@
+[versions]
+nva = { strictly = "1.24.18" }
+jacksonVersion = { strictly = "2.13.3" }
+jakartaVersion = { strictly = "2.1.6" }
+awsSdk2Version = { strictly = "2.17.191" }
+awsLambdaEvents = { strictly = '3.11.0' }
+awsLambdaCore = { strictly = '1.2.1' }
+nvaDatamodelVersion = { strictly = "0.16.10" }
+jerseyVersion = { strictly = "2.30.1" }
+rdf4jVersion = { strictly = "3.7.7" }
+problemVersion = { strictly = "0.27.1" }
+any23core = { strictly = "2.7" }
+icu4j = { strictly = "69.1" }
+commonsValidator = { strictly = "1.7" }
+apacheHttpClient = { strictly = "4.5.13" }
+wiremock = { strictly = "2.32.0" }
+j2html = { strictly = "1.4.0" }
+apiGuardian = { strictly = "1.1.2" }
+hamcrest = { strictly = '2.2' }
+junit5 = { strictly = '5.8.2' }
+mockito = { strictly = '4.5.1' }
+log4j = { strictly = '2.17.1' }
+slf4j = { strictly = '1.8.0-beta4' }
+nvaLanguage = { strictly = '1.0' }
+snakeyaml = { strictly = '1.29' }
+guava = { strictly = '31.0.1-jre' }
+awslog4j2 = { strictly = '1.5.1' }
+
+[libraries]
+nva-s3 = { group = "com.github.bibsysdev", name = "s3", version.ref = "nva" }
+nva-core = { group = "com.github.bibsysdev", name = "core", version.ref = "nva" }
+nva-json = { group = "com.github.bibsysdev", name = "json", version.ref = "nva" }
+nva-apigateway = { group = "com.github.bibsysdev", name = "apigateway", version.ref = "nva" }
+nva-secrets = { group = "com.github.bibsysdev", name = "secrets", version.ref = "nva" }
+nva-logutils = { group = "com.github.bibsysdev", name = "logutils", version.ref = "nva" }
+nva-identifiers = { group = "com.github.bibsysdev", name = "identifiers", version.ref = "nva" }
+nva-doi = { group = "com.github.bibsysdev", name = "doi", version.ref = "nva" }
+nva-events = { group = "com.github.bibsysdev", name = "eventhandlers", version.ref = "nva" }
+nva-testutils = { group = "com.github.bibsysdev", name = "nvatestutils", version.ref = "nva" }
+nva-datamodel = { group = "com.github.bibsysdev", name = "nva-datamodel-java", version.ref = "nvaDatamodelVersion" }
+nva-datamodeltestutils = { group = 'com.github.bibsysdev', name = 'nva-datamodel-testutils', version.ref = 'nvaDatamodelVersion' }
+nva-language = { group = 'com.github.bibsysdev', name = 'nva-language', version.ref = "nvaLanguage" }
+
+jackson-core = { group = "com.fasterxml.jackson.core", name = "jackson-core", version.ref = "jacksonVersion" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jacksonVersion" }
+jackson-datatype-jdk8 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jdk8", version.ref = "jacksonVersion" }
+jackson-annotations = { group = "com.fasterxml.jackson.core", name = "jackson-annotations", version.ref = "jacksonVersion" }
+jackson-datatype-jsr310 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jsr310", version.ref = "jacksonVersion" }
+
+aws-java-sdk2-s3 = { group = "software.amazon.awssdk", name = "s3", version.ref = "awsSdk2Version" }
+aws-java-sdk2-eventbridge = { group = 'software.amazon.awssdk', name = 'eventbridge', version.ref = 'awsSdk2Version' }
+aws-sdk2-secrets = { group = 'software.amazon.awssdk', name = 'secretsmanager', version.ref = 'awsSdk2Version' }
+aws-sdk2-core = { group = 'software.amazon.awssdk', name = 'sdk-core', version.ref = 'awsSdk2Version' }
+
+
+aws-lambda-java-core = { group = "com.amazonaws", name = "aws-lambda-java-core", version.ref = "awsLambdaCore" }
+aws-lambda-events = { group = 'com.amazonaws', name = 'aws-lambda-java-events', version.ref = 'awsLambdaEvents' }
+jakarta = { group = "jakarta.ws.rs", name = "jakarta.ws.rs-api", version.ref = "jakartaVersion" }
+jersey-common = { group = "org.glassfish.jersey.core", name = "jersey-common", version.ref = "jerseyVersion" }
+
+zalando-problem = { group = "org.zalando", name = "problem", version.ref = "problemVersion" }
+zalando-jackson-datatype-problem = { group = "org.zalando", name = "jackson-datatype-problem", version.ref = "problemVersion" }
+
+rdf4j-sail-api = { group = "org.eclipse.rdf4j", name = "rdf4j-sail-api", version.ref = "rdf4jVersion" }
+rdf4j-model = { group = "org.eclipse.rdf4j", name = "rdf4j-model", version.ref = "rdf4jVersion" }
+rdf4j-repository-sail = { group = "org.eclipse.rdf4j", name = "rdf4j-repository-sail", version.ref = "rdf4jVersion" }
+rdf4j-sail-memory = { group = "org.eclipse.rdf4j", name = "rdf4j-sail-memory", version.ref = "rdf4jVersion" }
+rdf4j-repository-api = { group = "org.eclipse.rdf4j", name = "rdf4j-repository-api", version.ref = "rdf4jVersion" }
+rdf4j-rio-api = { group = "org.eclipse.rdf4j", name = "rdf4j-rio-api", version.ref = "rdf4jVersion" }
+
+apache-any23-core = { group = "org.apache.any23", name = "apache-any23-core", version.ref = "any23core" }
+apache-any23-api = { group = "org.apache.any23", name = "apache-any23-api", version.ref = "any23core" }
+
+apiGuardian = { group = "org.apiguardian", name = "apiguardian-api", version.ref = "apiGuardian" }
+ordinals-to-numbers = { group = "com.ibm.icu", name = "icu4j", version.ref = "icu4j" }
+commons-validator = { group = "commons-validator", name = "commons-validator", version.ref = "commonsValidator" }
+httpclient = { group = "org.apache.httpcomponents", name = "httpclient", version.ref = "apacheHttpClient" }
+wiremock = { group = "com.github.tomakehurst", name = "wiremock-jre8", version.ref = "wiremock" }
+j2html = { group = "com.j2html", name = "j2html", version.ref = "j2html" }
+guava = { group = 'com.google.guava', name = 'guava', version.ref = 'guava' }
+
+mockito-core = { group = 'org.mockito', name = 'mockito-core', version.ref = 'mockito' }
+hamcrest-base = { group = 'org.hamcrest', name = 'hamcrest', version.ref = 'hamcrest' }
+hamcrest-core = { group = 'org.hamcrest', name = 'hamcrest-core', version.ref = 'hamcrest' }
+junit-jupiter-engine = { group = 'org.junit.jupiter', name = 'junit-jupiter-engine', version.ref = 'junit5' }
+junit-jupiter-params = { group = 'org.junit.jupiter', name = 'junit-jupiter-params', version.ref = 'junit5' }
+junit-jupiter-api = { group = 'org.junit.jupiter', name = 'junit-jupiter-api', version.ref = 'junit5' }
+junit-vintage-engine = { group = 'org.junit.vintage', name = 'junit-vintage-engine', version.ref = 'junit5' }
+
+xsd2java-xjc = { group = 'com.sun.xml.bind', name = 'jaxb-xjc', version = '3.0.2' }
+xsd2java-impl = { group = 'com.sun.xml.bind', name = 'jaxb-impl', version = '3.0.2' }
+xsd2java-api = { group = 'javax.xml.bind', name = 'jaxb-api', version = '2.4.0-b180830.0359' }
+xsd2java-activation = { group = 'javax.activation', name = 'javax.activation-api', version = '1.2.0' }
+xsd2java-jakarta = { group = 'jakarta.xml.bind', name = 'jakarta.xml.bind-api', version = '3.0.1' }
+
+log4j-core = { group = 'org.apache.logging.log4j', name = 'log4j-core', version.ref = 'log4j' }
+log4j-api = { group = 'org.apache.logging.log4j', name = 'log4j-api', version.ref = 'log4j' }
+log4j-slf4j18-impl = { group = 'org.apache.logging.log4j', name = 'log4j-slf4j18-impl', version.ref = 'log4j' }
+slf4j-api = { group = 'org.slf4j', name = 'slf4j-api', version.ref = 'slf4j' }
+aws-lambda-log4j2 = { group = 'com.amazonaws', name = 'aws-lambda-java-log4j2', version.ref = 'awslog4j2'}
+snakeyaml = { group = 'org.yaml', name = 'snakeyaml', version.ref = 'snakeyaml' }
+
+
+[bundles]
+rdf4j = ["rdf4j-sail-api", "rdf4j-model", "rdf4j-repository-sail", "rdf4j-sail-memory", "rdf4j-repository-api", "rdf4j-rio-api"]
+any23 = ["apache-any23-core", "apache-any23-api"]
+testing = ["mockito-core", "hamcrest-base", "hamcrest-core", "junit-jupiter-engine", "junit-jupiter-params",
+    "junit-jupiter-api", "junit-vintage-engine", "nva-testutils", "nva-logutils", "wiremock"]
+problem = ["zalando-jackson-datatype-problem", "zalando-problem"]
+xsd2java = ["xsd2java-xjc", "xsd2java-impl", "xsd2java-api", "xsd2java-activation", "xsd2java-jakarta"]
+logging = ['log4j-core', 'log4j-api', 'log4j-slf4j18-impl', 'slf4j-api', 'aws-lambda-log4j2']
+jackson = ['jackson-core', 'jackson-databind', 'jackson-datatype-jdk8', 'jackson-annotations', 'jackson-datatype-jsr310', 'zalando-jackson-datatype-problem']

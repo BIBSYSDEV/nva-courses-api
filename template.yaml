@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Lambda creating handle for publications
+
+Parameters:
+  CognitoAuthorizerArn:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: Reference to Cognito UserPool for the stage
+    Default: CognitoAuthorizerArn
+  CognitoUri:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: URI to the OAUTH endpoint of the Cognito client
+    Default: /NVA/CognitoUri
+  HandleDatabaseUri:
+    Type: String
+    Default: "{{resolve:secretsmanager:handle-database:SecretString:URI}}"
+  HandleDatabaseUser:
+    Type: String
+    Default: "{{resolve:secretsmanager:handle-database:SecretString:USER}}"
+  HandleDatabasePassword:
+    Type: String
+    Default: "{{resolve:secretsmanager:handle-database:SecretString:PASSWORD}}"
+
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 1798
+    Runtime: java11
+
+Resources:
+  NvaCreateHandleFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ lambda.amazonaws.com ]
+            Action: [ 'sts:AssumeRole' ]
+      Policies:
+        - PolicyName: writeLog
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*'
+
+  NvaCreateHandleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: create-handle
+      Handler: no.sikt.nva.handle.CreateHandleHandler::handleRequest
+      Role: !GetAtt NvaCreateHandleFunctionRole.Arn
+      Environment:
+        Variables:
+          HANDLE_PREFIX: !Ref HandlePrefix
+          HANDLE_SERVER_HOST: !Ref HandleServerHost
+          DATABASE_URI: !Ref HandleDatabaseUri
+          DATABASE_USER: !Ref HandleDatabaseUser
+          DATABASE_PASSWORD:  !Ref HandleDatabasePassword

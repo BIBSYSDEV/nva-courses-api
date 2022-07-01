@@ -1,0 +1,23 @@
+
+dependencies {
+    api(libs.nva.datamodel) {
+        exclude group: 'com.github.bibsysdev', module: 'nva-commons'
+    }
+
+    implementation libs.nva.json
+    implementation libs.nva.core
+    implementation libs.nva.events
+    implementation libs.nva.apigateway
+
+    implementation libs.aws.lambda.java.core
+    implementation libs.bundles.logging
+
+    implementation libs.bundles.jackson
+
+    testImplementation libs.nva.testutils
+    testImplementation libs.nva.json
+}
+
+test {
+}
+

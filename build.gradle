@@ -1,0 +1,23 @@
+
+plugins {
+    id 'nva-courses-api.java-library-conventions'
+}
+
+group 'no.unit.nva'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = JavaVersion.VERSION_11  // source-code version and must be <= targetCompatibility
+targetCompatibility = JavaVersion.VERSION_11 // bytecode target version
+
+wrapper {
+    distributionType = Wrapper.DistributionType.ALL
+    gradleVersion = "7.2"
+}
+
+allprojects {
+    apply plugin: 'nva-courses-api.java-library-conventions'
+}
+
+build {
+    dependsOn jacocoRootReport
+}
