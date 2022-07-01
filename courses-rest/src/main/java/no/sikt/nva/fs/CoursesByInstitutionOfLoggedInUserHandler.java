@@ -9,7 +9,7 @@ import nva.commons.core.JacocoGenerated;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, CoursesByInstitutionResponse> {
+public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, Course[]> {
 
     private static final Logger logger = LoggerFactory.getLogger(CoursesByInstitutionOfLoggedInUserHandler.class);
 
@@ -23,21 +23,18 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
     }
 
     @Override
-    protected CoursesByInstitutionResponse processInput(final Void input,
-                                                        final RequestInfo requestInfo,
-                                                        final Context context) {
+    protected Course[] processInput(final Void input,
+                                    final RequestInfo requestInfo,
+                                    final Context context) {
 
         final String institutionCode = "dummy";
         logger.debug("Fetching courses by institution '{}'", institutionCode);
 
-        final CoursesByInstitutionResponse response = new CoursesByInstitutionResponse();
-        response.setInstitutionCode(institutionCode);
-
-        return response;
+        return null;
     }
 
     @Override
-    protected Integer getSuccessStatusCode(Void input, CoursesByInstitutionResponse output) {
+    protected Integer getSuccessStatusCode(Void input, Course[] output) {
         return HttpURLConnection.HTTP_OK;
     }
 }
