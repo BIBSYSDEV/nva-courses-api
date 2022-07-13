@@ -4,27 +4,27 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public final class Course {
     private final String code;
-    private final String seasonNo;
-    private final String year;
+    private final String term;
+    private final int year;
 
     public Course(@JsonProperty("code") final String code,
-                  @JsonProperty("seasonNo") final String seasonNo,
-                  @JsonProperty("year") String year) {
+                  @JsonProperty("term") final String term,
+                  @JsonProperty("year") int year) {
 
         this.code = code;
-        this.seasonNo = seasonNo;
+        this.term = term;
         this.year = year;
     }
 
-    public final String getCode() {
+    public String getCode() {
         return code;
     }
 
-    public final String getSeasonNo() {
-        return seasonNo;
+    public String getTerm() {
+        return term;
     }
 
-    public final String getYear() {
+    public int getYear() {
         return year;
     }
 }

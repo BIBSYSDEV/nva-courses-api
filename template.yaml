@@ -12,15 +12,9 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: URI to the OAUTH endpoint of the Cognito client
     Default: /NVA/CognitoUri
-  HandleDatabaseUri:
+  FsConfig:
     Type: String
-    Default: "{{resolve:secretsmanager:handle-database:SecretString:URI}}"
-  HandleDatabaseUser:
-    Type: String
-    Default: "{{resolve:secretsmanager:handle-database:SecretString:USER}}"
-  HandleDatabasePassword:
-    Type: String
-    Default: "{{resolve:secretsmanager:handle-database:SecretString:PASSWORD}}"
+    Default: "{{resolve:secretsmanager:fs-config}}"
 
 Globals:
   Function:
@@ -29,7 +23,10 @@ Globals:
     Runtime: java11
 
 Resources:
-  NvaCreateHandleFunctionRole:
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+
+  CurrentlyTaughtCoursesFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -51,16 +48,112 @@ Resources:
                   - logs:PutLogEvents
                 Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*'
 
-  NvaCreateHandleFunction:
+  CurrentlyTaughtCoursesFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: create-handle
-      Handler: no.sikt.nva.handle.CreateHandleHandler::handleRequest
-      Role: !GetAtt NvaCreateHandleFunctionRole.Arn
+      CodeUri: courses-rest
+      Handler: no.sikt.nva.fs.CoursesByInstitutionOfLoggedInUserHandler::handleRequest
+      Role: !GetAtt CurrentlyTaughtCoursesFunctionRole.Arn
       Environment:
         Variables:
-          HANDLE_PREFIX: !Ref HandlePrefix
-          HANDLE_SERVER_HOST: !Ref HandleServerHost
-          DATABASE_URI: !Ref HandleDatabaseUri
-          DATABASE_USER: !Ref HandleDatabaseUser
-          DATABASE_PASSWORD:  !Ref HandleDatabasePassword
+          FS_CONFIG: !Ref FsConfig
+    Events:
+      GetEvent:
+        Type: Api
+        Properties:
+          Path: /
+          Method: get
+          RestApiId: !Ref NvaCoursesApi
+
+  NvaCoursesApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status",  "error.message": "$context.error.message" }'
+      StageName: Prod
+      EndpointConfiguration: REGIONAL
+      DefinitionBody:
+        'Fn::Transform':
+          Name: AWS::Include
+          Parameters:
+            Location: ./docs/openapi.yaml
+
+  #============================ Deploy API ============================================================================#
+  # This solves the problem described here:
+  # https://stackoverflow.com/questions/41423439/cloudformation-doesnt-deploy-to-api-gateway-stages-on-update
+  #====================================================================================================================#
+  ApiGatewayCreateDeploymentLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: ApiGatewayAdmin
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - apigateway:POST
+                Resource: !Sub 'arn:aws:apigateway:${AWS::Region}::/restapis/${NvaPublicationApi}/deployments'
+
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
+  ApiGatewayCreateDeploymentLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Timeout: 30
+      Role: !GetAtt ApiGatewayCreateDeploymentLambdaRole.Arn
+      Runtime: python3.8
+      Code:
+        ZipFile: |
+          import json, boto3
+          import cfnresponse
+          client = boto3.client('apigateway')
+          def lambda_handler(event, context):
+            responseData = {}
+            responseStatus = cfnresponse.SUCCESS
+            if event['RequestType'] == 'Update':
+              try:
+                properties = event['ResourceProperties']
+                response = client.create_deployment(
+                  restApiId=properties['RestApiId'],
+                  stageName=properties['StageName'],
+                  description='Deployed from Custom Resource'
+                )
+              except:
+                responseStatus = cfnresponse.FAILED
+            cfnresponse.send(event, context, responseStatus, responseData)
+
+  ApiGatewayCreateDeploymentCustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt ApiGatewayCreateDeploymentLambda.Arn
+      RestApiId: !Ref NvaPublicationApi
+      StageName: !Ref NvaPublicationApi.Stage
+      Timestamp: '${BUILD_TIMESTAMP}'
+      AuthorizerArn: !Ref CognitoAuthorizerArn
+
+  #===========================BasePathMappings========================================================
+
+  NvaCoursesBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      BasePath:
+        !If
+        - WithSuffix
+        - !Sub ${CustomDomainBasePath}-${Suffix}
+        - !Sub ${CustomDomainBasePath}
+      DomainName: !Ref ApiDomain
+      RestApiId: !Ref NvaCoursesApi
+      Stage: !Ref NvaCoursesApi.Stage

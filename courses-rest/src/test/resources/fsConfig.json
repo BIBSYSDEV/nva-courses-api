@@ -1,0 +1,11 @@
+{
+  "baseUri": "@@BASE_URI@@",
+  "institutions": [
+    {
+      "acronym": "OSLOMET",
+      "code": 215,
+      "username": "dummyUsername",
+      "password": "dummyPassword"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "status": 401,
+  "errors": [
+    {
+      "code": 4008,
+      "message": "Username and/or password are not valid",
+      "errorCorrection": "Please check your username and password and try again"
+    }
+  ],
+  "created": "2022-07-11T15:53:51.187+02:00"
+}
