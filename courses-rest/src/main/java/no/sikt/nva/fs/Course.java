@@ -1,8 +1,11 @@
 package no.sikt.nva.fs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
+import nva.commons.core.JacocoGenerated;
 
 public final class Course {
+
     private final String code;
     private final String term;
     private final int year;
@@ -26,5 +29,34 @@ public final class Course {
 
     public int getYear() {
         return year;
+    }
+
+    @JacocoGenerated
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Course course = (Course) o;
+        return year == course.year && code.equals(course.code) && term.equals(course.term);
+    }
+
+    @JacocoGenerated
+    @Override
+    public int hashCode() {
+        return Objects.hash(code, term, year);
+    }
+
+    @JacocoGenerated
+    @Override
+    public String toString() {
+        return "Course{"
+               + "code='" + code + '\''
+               + ", term='" + term + '\''
+               + ", year=" + year
+               + '}';
     }
 }

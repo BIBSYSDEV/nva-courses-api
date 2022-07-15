@@ -4,13 +4,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @SuppressWarnings("PMD.ShortClassName")
 public final class Item {
-    private final String href;
+    @SuppressWarnings("PMD.ShortFieldName")
+    private final FsIdentifier id;
 
-    public Item(@JsonProperty("href") final String href) {
-        this.href = href;
+    public Item(@JsonProperty("id") final FsIdentifier id) {
+        this.id = id;
     }
 
-    public String getHref() {
-        return href;
+    public FsIdentifier getId() {
+        return id;
     }
 }

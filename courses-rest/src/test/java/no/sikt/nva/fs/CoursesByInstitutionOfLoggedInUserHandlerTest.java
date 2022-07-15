@@ -5,10 +5,13 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.google.common.net.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
+import static com.google.common.net.HttpHeaders.AUTHORIZATION;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
+import static com.google.common.net.HttpHeaders.WWW_AUTHENTICATE;
 import static no.sikt.nva.fs.CoursesProvider.LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM;
 import static no.sikt.nva.fs.TestConfig.restApiMapper;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.ArrayMatching.arrayContaining;
 import static org.hamcrest.collection.IsArrayWithSize.arrayWithSize;
 import static org.hamcrest.collection.IsArrayWithSize.emptyArray;
 import static org.hamcrest.collection.IsMapContaining.hasKey;
@@ -26,6 +29,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.file.Path;
+import no.sikt.nva.fs.client.HttpUrlConnectionFsClient;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.GatewayResponse;
@@ -34,15 +38,32 @@ import nva.commons.core.ioutils.IoUtils;
 import nva.commons.core.paths.UriWrapper;
 import nva.commons.logutils.LogUtils;
 import nva.commons.logutils.TestAppender;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @WireMockTest
 class CoursesByInstitutionOfLoggedInUserHandlerTest {
 
+    private static final String EXAMPLE_COM_URI = "http://example.com";
     private static final String NON_SUPPORTED_INSTITUTION_PATH = "100.0.0.0.0";
     private static final String SUPPORTED_INSTITUTION_PATH = "215.0.0.0.0";
+    private static final String TAUGHT_COURSES_URL_PATH = "/undervisning";
+    private static final String DB_ID_QUERY_PARAM_NAME = "dbId";
+    private static final String INSTITUTION_QUERY_PARAM_NAME = "emne.institusjon";
+    private static final String LIMIT_QUERY_PARAM_NAME = "limit";
+    private static final String YEAR_QUERY_PARAM_NAME = "semester.ar";
+    private static final String SUCCESS_AUTHORIZATION_HEADER_VALUE = "Basic ZHVtbXlVc2VybmFtZTpkdW1teVBhc3N3b3Jk";
+    private static final String APPLICATION_JSON_CONTENT_TYPE_VALUE = "application/json";
+    private static final String YEAR_2022 = "2022";
+    private static final String YEAR_2023 = "2023";
+    private static final Course COURSE_B_SPRING_2022 = new Course("B", "VÅR", 2022);
+    private static final Course COURSE_OE_SPRING_2022 = new Course("Ø", "VÅR", 2022);
+    private static final Course COURSE_AA_SPRING_2022 = new Course("Å", "VÅR", 2022);
+    private static final Course COURSE_A_AUTUMN_2022 = new Course("A", "HØST", 2022);
+    private static final Course COURSE_AE_AUTUMN_2022 = new Course("Æ", "HØST", 2022);
+    private static final Course COURSE_A_SPRING_2023 = new Course("A", "VÅR", 2023);
+    private static final Course COURSE_OE_SPRING_2023 = new Course("Ø", "VÅR", 2023);
+    private static final Course COURSE_AA_SPRING_2023 = new Course("Å", "VÅR", 2023);
     private Context context;
     private CoursesByInstitutionOfLoggedInUserHandler handler;
     private ByteArrayOutputStream output;
@@ -62,16 +83,11 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         output = new ByteArrayOutputStream();
     }
 
-    @AfterEach
-    public void tearDown() {
-
-    }
-
     @Test
     void shouldReturnEmptyListOfCoursesAndLogProblemIfFsIsUnavailable() throws IOException {
         // prepare:
         final URI topLevelCristinOrgId =
-            UriWrapper.fromUri("http://example.com").addChild(NON_SUPPORTED_INSTITUTION_PATH).getUri();
+            UriWrapper.fromUri(EXAMPLE_COM_URI).addChild(NON_SUPPORTED_INSTITUTION_PATH).getUri();
         final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper)
                                       .withTopLevelCristinOrgId(topLevelCristinOrgId)
                                       .build();
@@ -96,17 +112,17 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     void shouldReturnEmptyListOfCoursesAndLogProblemIfFsReturnsNotAuthorized() throws IOException {
         // prepare:
         final URI topLevelCristinOrgId =
-            UriWrapper.fromUri("http://example.com").addChild(SUPPORTED_INSTITUTION_PATH).getUri();
+            UriWrapper.fromUri(EXAMPLE_COM_URI).addChild(SUPPORTED_INSTITUTION_PATH).getUri();
         final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper)
                                       .withTopLevelCristinOrgId(topLevelCristinOrgId)
                                       .build();
         final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
 
         String responseBody = IoUtils.stringFromResources(Path.of("notAuthorizedResponseFromFs.json"));
-        stubFor(get(urlPathEqualTo("/undervisning"))
+        stubFor(get(urlPathEqualTo(TAUGHT_COURSES_URL_PATH))
                     .willReturn(WireMock.aResponse()
                                     .withStatus(401)
-                                    .withHeader("WWW-Authenticate", "Basic realm=\"Unit fs-api\"")
+                                    .withHeader(WWW_AUTHENTICATE, "Basic realm=\"Unit fs-api\"")
                                     .withBody(responseBody)));
 
         final TimeProvider timeProvider = new FixedTimeProvider(2022, 8, 10);
@@ -124,6 +140,38 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
         assertThat(gatewayResponse.getBodyObject(Course[].class), emptyArray());
         assertThat(appender.getMessages(), containsString(LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM + "215"));
+    }
+
+    @Test
+    void shouldReturnEmptyListOfCoursesAndLogProblemIfFsReturnsNonSuccess() throws IOException {
+        // prepare:
+        final URI topLevelCristinOrgId =
+            UriWrapper.fromUri(EXAMPLE_COM_URI).addChild(SUPPORTED_INSTITUTION_PATH).getUri();
+        final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper)
+                                      .withTopLevelCristinOrgId(topLevelCristinOrgId)
+                                      .build();
+        final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
+
+        stubFor(get(urlPathEqualTo(TAUGHT_COURSES_URL_PATH))
+                    .willReturn(WireMock.aResponse()
+                                    .withStatus(HttpURLConnection.HTTP_INTERNAL_ERROR)));
+
+        final TimeProvider timeProvider = new FixedTimeProvider(2022, 8, 10);
+
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, timeProvider);
+
+        // execute:
+        handler.handleRequest(input, output, context);
+
+        // verify:
+        final GatewayResponse<Course[]> gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+
+        assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
+        assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
+        assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
+        assertThat(gatewayResponse.getBodyObject(Course[].class), emptyArray());
+        assertThat(appender.getMessages(), containsString(
+            HttpUrlConnectionFsClient.UNEXPECTED_STATUS_CODE_LOG_MESSAGE_PREFIX + "500"));
     }
 
     @Test
@@ -152,23 +200,31 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     void shouldReturnCoursesWhenInstitutionHasFsAccessAfterSummer() throws IOException {
         // prepare:
         final URI topLevelCristinOrgId =
-            UriWrapper.fromUri("http://example.com").addChild(SUPPORTED_INSTITUTION_PATH).getUri();
+            UriWrapper.fromUri(EXAMPLE_COM_URI).addChild(SUPPORTED_INSTITUTION_PATH).getUri();
         final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper)
                                       .withTopLevelCristinOrgId(topLevelCristinOrgId)
                                       .build();
 
         final String responseBody2022 = IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2022.json"));
-        stubFor(get(urlPathEqualTo("/undervisning"))
-                    .withQueryParam("semester.ar", equalTo("2022"))
+        stubFor(get(urlPathEqualTo(TAUGHT_COURSES_URL_PATH))
+                    .withHeader(AUTHORIZATION, equalTo(SUCCESS_AUTHORIZATION_HEADER_VALUE))
+                    .withQueryParam(YEAR_QUERY_PARAM_NAME, equalTo(YEAR_2022))
+                    .withQueryParam(DB_ID_QUERY_PARAM_NAME, equalTo("true"))
+                    .withQueryParam(INSTITUTION_QUERY_PARAM_NAME, equalTo("215"))
+                    .withQueryParam(LIMIT_QUERY_PARAM_NAME, equalTo("0"))
                     .willReturn(WireMock.ok()
-                                    .withHeader("Content-Type", "application/json")
+                                    .withHeader(CONTENT_TYPE, APPLICATION_JSON_CONTENT_TYPE_VALUE)
                                     .withBody(responseBody2022)));
 
         final String responseBody2023 = IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2023.json"));
-        stubFor(get(urlPathEqualTo("/undervisning"))
-                    .withQueryParam("semester.ar", equalTo("2023"))
+        stubFor(get(urlPathEqualTo(TAUGHT_COURSES_URL_PATH))
+                    .withHeader(AUTHORIZATION, equalTo(SUCCESS_AUTHORIZATION_HEADER_VALUE))
+                    .withQueryParam(YEAR_QUERY_PARAM_NAME, equalTo(YEAR_2023))
+                    .withQueryParam(DB_ID_QUERY_PARAM_NAME, equalTo("true"))
+                    .withQueryParam(INSTITUTION_QUERY_PARAM_NAME, equalTo("215"))
+                    .withQueryParam(LIMIT_QUERY_PARAM_NAME, equalTo("0"))
                     .willReturn(WireMock.ok()
-                                    .withHeader("Content-Type", "application/json")
+                                    .withHeader(CONTENT_TYPE, APPLICATION_JSON_CONTENT_TYPE_VALUE)
                                     .withBody(responseBody2023)));
 
         final TimeProvider timeProvider = new FixedTimeProvider(2022, 8, 10);
@@ -186,23 +242,32 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
 
         final Course[] courses = gatewayResponse.getBodyObject(Course[].class);
-        assertThat(courses, arrayWithSize(1117));
+        assertThat(courses, arrayWithSize(5));
+        assertThat(courses, arrayContaining(COURSE_A_AUTUMN_2022,
+                                            COURSE_AE_AUTUMN_2022,
+                                            COURSE_A_SPRING_2023,
+                                            COURSE_OE_SPRING_2023,
+                                            COURSE_AA_SPRING_2023));
     }
 
     @Test
     void shouldReturnCoursesWhenInstitutionHasFsAccessBeforeSummer() throws IOException {
         // prepare:
         final URI topLevelCristinOrgId =
-            UriWrapper.fromUri("http://example.com").addChild(SUPPORTED_INSTITUTION_PATH).getUri();
+            UriWrapper.fromUri(EXAMPLE_COM_URI).addChild(SUPPORTED_INSTITUTION_PATH).getUri();
         final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper)
                                       .withTopLevelCristinOrgId(topLevelCristinOrgId)
                                       .build();
 
         final String responseBody2022 = IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2022.json"));
-        stubFor(get(urlPathEqualTo("/undervisning"))
-                    .withQueryParam("semester.ar", equalTo("2022"))
+        stubFor(get(urlPathEqualTo(TAUGHT_COURSES_URL_PATH))
+                    .withHeader(AUTHORIZATION, equalTo(SUCCESS_AUTHORIZATION_HEADER_VALUE))
+                    .withQueryParam(YEAR_QUERY_PARAM_NAME, equalTo(YEAR_2022))
+                    .withQueryParam(DB_ID_QUERY_PARAM_NAME, equalTo("true"))
+                    .withQueryParam(INSTITUTION_QUERY_PARAM_NAME, equalTo("215"))
+                    .withQueryParam(LIMIT_QUERY_PARAM_NAME, equalTo("0"))
                     .willReturn(WireMock.ok()
-                                    .withHeader("Content-Type", "application/json")
+                                    .withHeader(CONTENT_TYPE, APPLICATION_JSON_CONTENT_TYPE_VALUE)
                                     .withBody(responseBody2022)));
 
         final TimeProvider timeProvider = new FixedTimeProvider(2022, 3, 10);
@@ -220,6 +285,11 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
 
         final Course[] courses = gatewayResponse.getBodyObject(Course[].class);
-        assertThat(courses, arrayWithSize(2090));
+        assertThat(courses, arrayWithSize(5));
+        assertThat(courses, arrayContaining(COURSE_B_SPRING_2022,
+                                            COURSE_OE_SPRING_2022,
+                                            COURSE_AA_SPRING_2022,
+                                            COURSE_A_AUTUMN_2022,
+                                            COURSE_AE_AUTUMN_2022));
     }
 }

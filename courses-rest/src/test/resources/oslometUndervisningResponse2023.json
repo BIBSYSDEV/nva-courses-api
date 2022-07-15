@@ -20,121 +20,52 @@
   },
   "items": [
     {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,ELTS3900,1,2023,V%C3%85R,1"
+      "id": {
+        "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%85,1,2023,V%C3%85R,1",
+        "emne": {
+          "href": "https://api.fellesstudentsystem.no/emner/215,%C3%85,1",
+          "institusjon": 215,
+          "kode": "Å",
+          "versjon": "1"
+        },
+        "semester": {
+          "href": "https://api.fellesstudentsystem.no/semestre/2023,V%C3%85R",
+          "ar": 2023,
+          "termin": "VÅR"
+        }
+      }
     },
     {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,MAJOPRA1,1,2023,V%C3%85R,2"
+      "id": {
+        "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98,1,2023,V%C3%85R,1",
+        "emne": {
+          "href": "https://api.fellesstudentsystem.no/emner/215,%C3%98,1",
+          "institusjon": 215,
+          "kode": "Ø",
+          "versjon": "1"
+        },
+        "semester": {
+          "href": "https://api.fellesstudentsystem.no/semestre/2023,V%C3%85R",
+          "ar": 2023,
+          "termin": "VÅR"
+        }
+      }
     },
     {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,MAPSYPRA10,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PHUV9350,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PHUV9360,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PHUV9390,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PHUV9460,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PHVIT9000,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PHVIT9100,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PHVIT9300,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PPUHPRA3,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,PROG1000,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,REJUR3101,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,SYKK3900,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,SYKK3900B,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,SYKKPRA70I,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,SYKKPRA70IB,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,SYKP3900,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,SYKP3900B,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,SYKPPRA70I,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,SYKPPRA70IB,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,UHPED6000,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,VEKU6100,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,VMNT6100,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,VPSYDPRA11,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,VPSYPRA11,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98AADM3200,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98AADM3300,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98AADM3400,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98AADM3500,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98ABED2200,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98ABED2300,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98ABED3200,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98ABED3300,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98ABED3700,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98ABED3800,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98AETI2000,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98AJUR2100,1,2023,V%C3%85R,1"
-    },
-    {
-      "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98AS%C3%98K2000,1,2023,V%C3%85R,1"
+      "id": {
+        "href": "https://api.fellesstudentsystem.no/undervisning/215,A,1,2023,V%C3%85R,1",
+        "emne": {
+          "href": "https://api.fellesstudentsystem.no/emner/215,A,1",
+          "institusjon": 215,
+          "kode": "A",
+          "versjon": "1"
+        },
+        "semester": {
+          "href": "https://api.fellesstudentsystem.no/semestre/2023,V%C3%85R",
+          "ar": 2023,
+          "termin": "VÅR"
+        }
+      }
     }
   ]
 }

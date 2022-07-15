@@ -67,6 +67,9 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
     }
 
     private Optional<Integer> getInstitutionCodeOfCurrentlyLoggedInUser(final RequestInfo requestInfo) {
+        // We do not want to pick the FS institution code off the organizational URI like this, but
+        // rather make it available directly in the RequestInfo object itself. Until this is supported,
+        // we leave this as technical dept.
         final Optional<URI> topLevelOrgCristinId = requestInfo.getTopLevelOrgCristinId();
 
         if (topLevelOrgCristinId.isPresent()) {

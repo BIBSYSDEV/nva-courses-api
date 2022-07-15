@@ -18,7 +18,9 @@ import org.slf4j.LoggerFactory;
 public class HttpUrlConnectionFsClient implements FsClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpUrlConnectionFsClient.class);
+    public static final  String UNEXPECTED_STATUS_CODE_LOG_MESSAGE_PREFIX = "Unexpected response code from FS: ";
     private static final String TEACHING_URI_PATH = "undervisning";
+    private static final String DB_IDENTIFIER_QUERY_PARAM_NAME = "dbId";
     private static final String INSTITUTION_QUERY_PARAM_NAME = "emne.institusjon";
     private static final String YEAR_QUERY_PARAM_NAME = "semester.ar";
     private static final String LIMIT_QUERY_PARAM_NAME = "limit";
@@ -53,6 +55,7 @@ public class HttpUrlConnectionFsClient implements FsClient {
     public FsCollectionResponse getTaughtCourses(final int year) {
         final URI uri = UriWrapper.fromUri(baseUri)
                             .addChild(TEACHING_URI_PATH)
+                            .addQueryParameter(DB_IDENTIFIER_QUERY_PARAM_NAME, "true")
                             .addQueryParameter(INSTITUTION_QUERY_PARAM_NAME, Integer.toString(institutionCode))
                             .addQueryParameter(YEAR_QUERY_PARAM_NAME, Integer.toString(year))
                             .addQueryParameter(LIMIT_QUERY_PARAM_NAME, UNLIMITED)
@@ -67,13 +70,15 @@ public class HttpUrlConnectionFsClient implements FsClient {
             if (response.statusCode() == HttpURLConnection.HTTP_OK) {
                 return objectMapper.readValue(response.body(), FsCollectionResponse.class);
             } else {
-                final String message = String.format("Unexpected response code from FS: %d", response.statusCode());
+                final String message = String.format(UNEXPECTED_STATUS_CODE_LOG_MESSAGE_PREFIX + "%d",
+                                                     response.statusCode());
                 LOGGER.error(message);
-                throw new RuntimeException(message);
+                throw new FsClientException(message);
             }
         } catch (IOException | InterruptedException e) {
-            LOGGER.error("Unable to communicate with FS", e);
-            throw new RuntimeException(e);
+            final String message = "Unable to communicate with FS";
+            LOGGER.error(message, e);
+            throw new FsClientException(message, e);
         }
     }
 
