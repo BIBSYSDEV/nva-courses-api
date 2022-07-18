@@ -31,6 +31,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 import no.sikt.nva.fs.client.HttpUrlConnectionFsClient;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.ApiGatewayHandler;
@@ -81,8 +82,8 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         final String fsBaseUri = UriWrapper.fromUri(wmRuntimeInfo.getHttpBaseUrl()).toString();
         final String fsConfigString = IoUtils.stringFromResources(Path.of("fsConfig.json"))
             .replace("@@BASE_URI@@", fsBaseUri);
-        when(environment.readEnv(CoursesByInstitutionOfLoggedInUserHandler.FS_CONFIG_ENV_NAME))
-            .thenReturn(fsConfigString);
+        when(environment.readEnvOpt(CoursesByInstitutionOfLoggedInUserHandler.FS_CONFIG_ENV_NAME))
+            .thenReturn(Optional.of(fsConfigString));
         
         context = mock(Context.class);
         output = new ByteArrayOutputStream();

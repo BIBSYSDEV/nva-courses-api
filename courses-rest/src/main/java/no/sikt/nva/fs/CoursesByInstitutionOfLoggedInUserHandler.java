@@ -42,7 +42,7 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
                                     final Context context) {
         
         return getInstitutionCodeOfCurrentlyLoggedInUser(requestInfo)
-            .map(this::somethingWithCourses)
+            .map(this::fetchCoursesByInstitutionIfInstitutionConfigPresent)
             .orElse(new Course[0]);
     }
     
@@ -58,15 +58,15 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
             .orElseThrow();
     }
     
-    private Course[] somethingWithCourses(Integer institutionCode) {
+    private Course[] fetchCoursesByInstitutionIfInstitutionConfigPresent(final int institutionCode) {
         return fsConfig.getInstitutions().stream()
             .filter(inst -> inst.getCode() == institutionCode)
             .findFirst()
-            .map(this::somethingAboutInstitutions)
+            .map(this::fetchCoursesByInstitution)
             .orElse(new Course[0]);
     }
     
-    private Course[] somethingAboutInstitutions(InstitutionConfig institutionConfig) {
+    private Course[] fetchCoursesByInstitution(final InstitutionConfig institutionConfig) {
         final CoursesProvider coursesProvider = new CoursesProvider(OBJECT_MAPPER, fsConfig.getBaseUri(),
             institutionConfig);
         return coursesProvider.getCurrentlyTaughtCourses(timeProvider.getYear(), timeProvider.getMonthValue());
