@@ -2,11 +2,11 @@
 This repository contains components for backing an API to get course information from FS
 (Felles Studentsystem).
 
-The Courses API is used from a feature in DLR to give access to Digital Learning Resources to
-students that is currently attending one or more courses. Only a few of DLR's customers have
-subscribed to this feature, and this is handled by configuration. Generally, the API returns an
-empty list of courses if something fails in the FS integration for the institution or if the
-institution is not configured to use it. 
+The Courses API is used from a feature in DLR to give access to digital learning resources
+(Digitale LæringsRessurser) to students that is currently attending one or more courses. Only a few
+of DLR's customers have subscribed to this feature, and this is handled by configuration. Generally,
+the API returns an empty list of courses if something fails in the FS integration for the institution
+or if the institution is not configured to use it. 
 
 ## Courses currently taught by institution of logged-in user
 Lambda for fetching courses for currently taught courses in the institution where the currently
