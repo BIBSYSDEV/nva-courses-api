@@ -24,15 +24,14 @@ import org.slf4j.LoggerFactory;
 public class CoursesProvider {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CoursesProvider.class);
-    /* default */ static final String LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM =
-        "Unable to communicate with FS API for ";
+    /* default */ static final String LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM = "Unable to communicate with FS "
+                                                                                    + "API for ";
 
     private final ObjectMapper objectMapper;
     private final String fsBaseUri;
     private final InstitutionConfig institutionConfig;
 
-    public CoursesProvider(final ObjectMapper objectMapper,
-                           final String fsBaseUri,
+    public CoursesProvider(final ObjectMapper objectMapper, final String fsBaseUri,
                            final InstitutionConfig institutionConfig) {
 
         this.objectMapper = objectMapper;
@@ -44,9 +43,7 @@ public class CoursesProvider {
 
         LOGGER.debug("Fetching courses by institution '{}' from FS", institutionConfig.getCode());
 
-        final FsClient fsClient = new HttpUrlConnectionFsClient(objectMapper,
-                                                                fsBaseUri,
-                                                                institutionConfig.getCode(),
+        final FsClient fsClient = new HttpUrlConnectionFsClient(objectMapper, fsBaseUri, institutionConfig.getCode(),
                                                                 institutionConfig.getUsername(),
                                                                 institutionConfig.getPassword());
 
@@ -56,9 +53,8 @@ public class CoursesProvider {
 
         final Comparator<Course> courseComparator = new CourseComparator();
 
-        yearsToTerms.forEach((entryYear, terms) ->
-                                 courses.addAll(fetchCoursesForYearFilteringOnTerm(fsClient, courseComparator,
-                                                                                   entryYear, terms)));
+        yearsToTerms.forEach((entryYear, terms) -> courses.addAll(
+            fetchCoursesForYearFilteringOnTerm(fsClient, courseComparator, entryYear, terms)));
 
         return courses.toArray(new Course[0]);
     }
@@ -79,23 +75,23 @@ public class CoursesProvider {
     }
 
     private List<Course> fetchCoursesForYearFilteringOnTerm(final FsClient fsClient,
-                                                            final Comparator<Course> courseComparator,
-                                                            final int year,
+                                                            final Comparator<Course> courseComparator, final int year,
                                                             final List<Term> terms) {
-        final List<String> termCodes = terms.stream()
-                                           .map(Term::getCode)
-                                           .collect(Collectors.toList());
+        final List<String> termCodes = terms.stream().map(Term::getCode).collect(Collectors.toList());
 
-        return Try.attempt(() -> fsClient.getTaughtCourses(year).getItems().stream()
+        return Try.attempt(() -> fsClient.getTaughtCourses(year)
+                                     .getItems()
+                                     .stream()
                                      .map(this::asCourse)
                                      .filter(course -> termCodes.contains(course.getTerm()))
                                      .sorted(courseComparator)
-                                     .collect(Collectors.toList())).orElse((failure) -> {
-            final String message = String.format(LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM + "%d",
-                                                 institutionConfig.getCode());
-            LOGGER.warn(message, failure.getException());
-            return Collections.<Course>emptyList();
-        });
+                                     .collect(Collectors.toList()))
+                   .orElse((failure) -> {
+                       final String message = String.format(LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM + "%d",
+                                                            institutionConfig.getCode());
+                       LOGGER.warn(message, failure.getException());
+                       return Collections.<Course>emptyList();
+                   });
     }
 
     private Course asCourse(final Item item) {

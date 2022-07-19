@@ -7,9 +7,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public enum Term {
-    SPRING("VÅR", 1),
+    SPRING("V\u00C5R", 1), // VÅR
     SUMMER("SOM", 2),
-    FALL("HØST", 3),
+    FALL("H\u00D8ST", 3), // HØST
     WINTER("VIT", 4);
 
     private static final Map<String, Term> CODE_TO_TERM_MAP = new ConcurrentHashMap<>();

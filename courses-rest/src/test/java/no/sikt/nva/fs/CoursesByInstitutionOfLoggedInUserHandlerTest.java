@@ -90,7 +90,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     @Test
     void shouldReturnEmptyListOfCoursesAndLogProblemIfFsIsUnavailable() throws IOException {
         // prepare:
-        var input = createRequest(NON_SUPPORTED_INSTITUTION_PATH);
+        final InputStream input = createRequest(NON_SUPPORTED_INSTITUTION_PATH);
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, FIXED_CLOCK);
 
         // execute:
@@ -108,15 +108,16 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     @Test
     void shouldReturnEmptyListOfCoursesAndLogProblemIfFsReturnsNotAuthorized() throws IOException {
         // prepare:
-        var input = createRequest(SUPPORTED_INSTITUTION_PATH);
-        var appender = LogUtils.getTestingAppenderForRootLogger();
+        final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
 
-        var responseBody = IoUtils.stringFromResources(Path.of("notAuthorizedResponseFromFs.json"));
+        final String responseBody = IoUtils.stringFromResources(Path.of("notAuthorizedResponseFromFs.json"));
         stubFor(get(urlPathEqualTo(TAUGHT_COURSES_URL_PATH))
                     .willReturn(WireMock.aResponse()
                                     .withStatus(401)
                                     .withHeader(WWW_AUTHENTICATE, "Basic realm=\"Unit fs-api\"")
                                     .withBody(responseBody)));
+
+        final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, FIXED_CLOCK);
 
