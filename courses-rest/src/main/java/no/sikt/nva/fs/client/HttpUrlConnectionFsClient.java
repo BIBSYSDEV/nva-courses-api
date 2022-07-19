@@ -2,9 +2,7 @@ package no.sikt.nva.fs.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.net.Authenticator;
 import java.net.HttpURLConnection;
-import java.net.PasswordAuthentication;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -36,14 +34,7 @@ public class HttpUrlConnectionFsClient implements FsClient {
                                      final int institutionCode, final String username,
                                      final String password) {
 
-        this.httpClient = HttpClient.newBuilder()
-                              .authenticator(new Authenticator() {
-                                  @Override
-                                  protected PasswordAuthentication getPasswordAuthentication() {
-                                      return new PasswordAuthentication(username, password.toCharArray());
-                                  }
-                              })
-                              .build();
+        this.httpClient = HttpClient.newBuilder().build();
         this.objectMapper = objectMapper;
         this.baseUri = baseUri;
         this.institutionCode = institutionCode;

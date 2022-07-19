@@ -47,7 +47,8 @@ import org.junit.jupiter.api.Test;
 @WireMockTest
 class CoursesByInstitutionOfLoggedInUserHandlerTest {
 
-    public static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2022-08-10T10:15:30.00Z"), TimeProvider.ZONE_ID);
+    public static final Clock AFTER_SUMMER = Clock.fixed(Instant.parse("2022-08-10T10:15:30.00Z"),
+                                                         TimeProvider.ZONE_ID);
     public static final Clock BEFORE_SUMMER = Clock.fixed(Instant.parse("2022-03-10T00:00:00.00Z"),
                                                           TimeProvider.ZONE_ID);
     private static final String EXAMPLE_COM_URI = "http://example.com";
@@ -91,7 +92,29 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     void shouldReturnEmptyListOfCoursesAndLogProblemIfFsIsUnavailable() throws IOException {
         // prepare:
         final InputStream input = createRequest(NON_SUPPORTED_INSTITUTION_PATH);
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, FIXED_CLOCK);
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
+
+        // execute:
+        handler.handleRequest(input, output, context);
+
+        // verify:
+        var gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+
+        assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
+        assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
+        assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
+        assertThat(gatewayResponse.getBodyObject(Course[].class), emptyArray());
+    }
+
+    @Test
+    void shouldReturnEmptyListOfCoursesAndLogProblemIfFsReturnsInvalidData() throws IOException {
+        // prepare:
+        final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
+
+        final String responseBody = "[]";
+        stubRequestForCourses(2022, responseBody);
+
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 
         // execute:
         handler.handleRequest(input, output, context);
@@ -119,7 +142,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
 
         final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, FIXED_CLOCK);
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 
         // execute:
         handler.handleRequest(input, output, context);
@@ -144,7 +167,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
                     .willReturn(WireMock.aResponse()
                                     .withStatus(HttpURLConnection.HTTP_INTERNAL_ERROR)));
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, FIXED_CLOCK);
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 
         // execute:
         handler.handleRequest(input, output, context);
@@ -166,7 +189,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper)
                                       .build();
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, FIXED_CLOCK);
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 
         // execute:
         handler.handleRequest(input, output, context);
@@ -188,7 +211,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         stubRequestForCourses(2022, IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2022.json")));
         stubRequestForCourses(2023, IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2023.json")));
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, FIXED_CLOCK);
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 
         // execute:
         handler.handleRequest(input, output, context);
