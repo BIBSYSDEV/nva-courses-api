@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.Collator;
 import java.time.Month;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -11,12 +12,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import no.sikt.nva.fs.client.FsClient;
-import no.sikt.nva.fs.client.FsClientException;
 import no.sikt.nva.fs.client.FsCourse;
 import no.sikt.nva.fs.client.FsSemester;
 import no.sikt.nva.fs.client.HttpUrlConnectionFsClient;
 import no.sikt.nva.fs.client.Item;
 import no.sikt.nva.fs.config.InstitutionConfig;
+import nva.commons.core.attempt.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,20 @@ public class CoursesProvider {
                                                                 institutionConfig.getUsername(),
                                                                 institutionConfig.getPassword());
 
+        final Map<Integer, List<Term>> yearsToTerms = findRelevantYearsAndTerms(year, month);
+
+        final List<Course> courses = new ArrayList<>();
+
+        final Comparator<Course> courseComparator = new CourseComparator();
+
+        yearsToTerms.forEach((entryYear, terms) ->
+                                 courses.addAll(fetchCoursesForYearFilteringOnTerm(fsClient, courseComparator,
+                                                                                   entryYear, terms)));
+
+        return courses.toArray(new Course[0]);
+    }
+
+    private Map<Integer, List<Term>> findRelevantYearsAndTerms(final int year, final int month) {
         final Map<Integer, List<Term>> yearsToTerms = new ConcurrentHashMap<>();
         /*
             During the first half of the year, we look up all courses for the current year. In the last half of the
@@ -60,12 +75,42 @@ public class CoursesProvider {
         } else {
             yearsToTerms.put(year, Term.getAfterIncluding(Term.SPRING));
         }
+        return yearsToTerms;
+    }
 
-        final List<Course> courses = new ArrayList<>();
+    private List<Course> fetchCoursesForYearFilteringOnTerm(final FsClient fsClient,
+                                                            final Comparator<Course> courseComparator,
+                                                            final int year,
+                                                            final List<Term> terms) {
+        final List<String> termCodes = terms.stream()
+                                           .map(Term::getCode)
+                                           .collect(Collectors.toList());
 
-        final Comparator<Term> termComparator = Comparator.comparingInt(Term::getSeqNo);
+        return Try.attempt(() -> fsClient.getTaughtCourses(year).getItems().stream()
+                                     .map(this::asCourse)
+                                     .filter(course -> termCodes.contains(course.getTerm()))
+                                     .sorted(courseComparator)
+                                     .collect(Collectors.toList())).orElse((failure) -> {
+            final String message = String.format(LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM + "%d",
+                                                 institutionConfig.getCode());
+            LOGGER.warn(message, failure.getException());
+            return Collections.<Course>emptyList();
+        });
+    }
 
-        final Comparator<Course> courseComparator = (course1, course2) -> {
+    private Course asCourse(final Item item) {
+        final FsCourse course = item.getId().getCourse();
+        final FsSemester semester = item.getId().getSemester();
+
+        return new Course(course.getCode(), semester.getTerm(), semester.getYear());
+    }
+
+    private static class CourseComparator implements Comparator<Course> {
+
+        private final Comparator<Term> termComparator = Comparator.comparingInt(Term::getSeqNo);
+
+        @Override
+        public int compare(Course course1, Course course2) {
             int result = Integer.compare(course1.getYear(), course2.getYear());
             if (result == 0) {
                 final Term term1 = Term.fromCode(course1.getTerm());
@@ -78,33 +123,6 @@ public class CoursesProvider {
             }
 
             return result;
-        };
-
-        yearsToTerms.forEach((entryYear, terms) -> {
-            final List<String> termCodes = terms.stream()
-                                               .map(Term::getCode)
-                                               .collect(Collectors.toList());
-            try {
-                final List<Course> coursesForYear = fsClient.getTaughtCourses(entryYear).getItems().stream()
-                                                        .map(this::asCourse)
-                                                        .filter(course -> termCodes.contains(course.getTerm()))
-                                                        .sorted(courseComparator)
-                                                        .collect(Collectors.toList());
-                courses.addAll(coursesForYear);
-            } catch (FsClientException e) {
-                final String message = String.format(LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM + "%d",
-                                                     institutionConfig.getCode());
-                LOGGER.warn(message, e);
-            }
-        });
-
-        return courses.toArray(new Course[0]);
-    }
-
-    private Course asCourse(final Item item) {
-        final FsCourse course = item.getId().getCourse();
-        final FsSemester semester = item.getId().getSemester();
-
-        return new Course(course.getCode(), semester.getTerm(), semester.getYear());
+        }
     }
 }
