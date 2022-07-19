@@ -61,14 +61,14 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     private static final String YEAR_QUERY_PARAM_NAME = "semester.ar";
     private static final String SUCCESS_AUTHORIZATION_HEADER_VALUE = "Basic ZHVtbXlVc2VybmFtZTpkdW1teVBhc3N3b3Jk";
     private static final String APPLICATION_JSON_CONTENT_TYPE_VALUE = "application/json";
-    private static final Course COURSE_B_SPRING_2022 = new Course("B", "VÅR", 2022);
-    private static final Course COURSE_OE_SPRING_2022 = new Course("Ø", "VÅR", 2022);
-    private static final Course COURSE_AA_SPRING_2022 = new Course("Å", "VÅR", 2022);
-    private static final Course COURSE_A_AUTUMN_2022 = new Course("A", "HØST", 2022);
-    private static final Course COURSE_AE_AUTUMN_2022 = new Course("Æ", "HØST", 2022);
-    private static final Course COURSE_A_SPRING_2023 = new Course("A", "VÅR", 2023);
-    private static final Course COURSE_OE_SPRING_2023 = new Course("Ø", "VÅR", 2023);
-    private static final Course COURSE_AA_SPRING_2023 = new Course("Å", "VÅR", 2023);
+    private static final Course COURSE_B_SPRING_2022 = new Course("B", "V\u00C5R", 2022); // VÅR
+    private static final Course COURSE_OE_SPRING_2022 = new Course("\u00D8", "V\u00C5R", 2022); // Ø, VÅR
+    private static final Course COURSE_AA_SPRING_2022 = new Course("\u00C5", "V\u00C5R", 2022); // Å, VÅR
+    private static final Course COURSE_A_AUTUMN_2022 = new Course("A", "H\u00D8ST", 2022); // HØST
+    private static final Course COURSE_AE_AUTUMN_2022 = new Course("\u00C6", "H\u00D8ST", 2022); // Æ, HØST
+    private static final Course COURSE_A_SPRING_2023 = new Course("A", "V\u00C5R", 2023); // VÅR
+    private static final Course COURSE_OE_SPRING_2023 = new Course("\u00D8", "V\u00C5R", 2023); // Ø, VÅR
+    private static final Course COURSE_AA_SPRING_2023 = new Course("\u00C5", "V\u00C5R", 2023); // Å, VÅR
     final Environment environment = mock(Environment.class);
     private Context context;
     private CoursesByInstitutionOfLoggedInUserHandler handler;
