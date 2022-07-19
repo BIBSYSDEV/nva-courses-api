@@ -8,7 +8,7 @@ subscribed to this feature, and this is handled by configuration. Generally, the
 empty list of courses if something fails in the FS integration for the institution or if the
 institution is not configured to use it. 
 
-## Courses currently taught by institution of logged in user.
+## Courses currently taught by institution of logged-in user
 Lambda for fetching courses for currently taught courses in the institution where the currently
 logged-in user belongs. The institution of the currently logged-in user is assumed to be part of the
 ```RequestInfo``` object provided by the ```ApiGatewayHandler``` NVA framework class. More
