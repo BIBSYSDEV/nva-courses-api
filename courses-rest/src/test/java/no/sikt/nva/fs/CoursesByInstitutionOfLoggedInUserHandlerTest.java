@@ -7,9 +7,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.google.common.net.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static com.google.common.net.HttpHeaders.AUTHORIZATION;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
-import static com.google.common.net.HttpHeaders.WWW_AUTHENTICATE;
-import static no.sikt.nva.fs.CoursesProvider.LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM;
 import static no.sikt.nva.fs.TestConfig.restApiMapper;
+import static no.sikt.nva.fs.client.HttpStatusException.UNEXPECTED_RESPONSE_CODE_RETURNED_BY_SERVER_MESSAGE;
+import static no.sikt.nva.fs.client.HttpUrlConnectionFsClient.PROBLEMS_COMMUNICATING_WITH_SERVER_MESSAGE;
+import static no.sikt.nva.fs.client.HttpUrlConnectionFsClient.PROBLEMS_READING_RESPONSE_FROM_SERVER_MESSAGE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsEmptyIterable.emptyIterable;
 import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
@@ -33,7 +34,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import no.sikt.nva.fs.client.HttpUrlConnectionFsClient;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.GatewayResponse;
@@ -44,6 +44,7 @@ import nva.commons.logutils.LogUtils;
 import nva.commons.logutils.TestAppender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.zalando.problem.Problem;
 
 @WireMockTest
 class CoursesByInstitutionOfLoggedInUserHandlerTest {
@@ -90,21 +91,32 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     }
 
     @Test
-    void shouldReturnEmptyListOfCoursesAndLogProblemIfFsIsUnavailable() throws IOException {
+    void shouldReturnBadGatewayIfFsIsUnavailable() throws IOException {
         // prepare:
-        final InputStream input = createRequest(NON_SUPPORTED_INSTITUTION_PATH);
+        final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
+
+        final String fsConfigString = IoUtils.stringFromResources(Path.of("fsConfig.json"))
+                                          .replace("@@BASE_URI@@", "http://localhost:8081");
+        when(environment.readEnvOpt(CoursesByInstitutionOfLoggedInUserHandler.FS_CONFIG_ENV_NAME))
+            .thenReturn(Optional.of(fsConfigString));
+
+        var appender = LogUtils.getTestingAppenderForRootLogger();
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 
         // execute:
         handler.handleRequest(input, output, context);
 
         // verify:
-        var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
+        assertThat(appender.getMessages(), containsString(PROBLEMS_COMMUNICATING_WITH_SERVER_MESSAGE));
 
-        assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
+        var gatewayResponse = GatewayResponse.fromOutputStream(output, Problem.class);
+
+        assertEquals(HttpURLConnection.HTTP_BAD_GATEWAY, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
+
+        var problem = gatewayResponse.getBodyObject(Problem.class);
+        assertThat(problem.getDetail(), containsString(PROBLEMS_COMMUNICATING_WITH_SERVER_MESSAGE));
     }
 
     @Test
@@ -115,33 +127,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         final String responseBody = "[]";
         stubRequestForCourses(2022, responseBody);
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
-
-        // execute:
-        handler.handleRequest(input, output, context);
-
-        // verify:
-        var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
-
-        assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
-        assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
-        assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
-    }
-
-    @Test
-    void shouldReturnEmptyListOfCoursesAndLogProblemIfFsReturnsNotAuthorized() throws IOException {
-        // prepare:
-        final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
-
-        final String responseBody = IoUtils.stringFromResources(Path.of("notAuthorizedResponseFromFs.json"));
-        stubFor(get(urlPathEqualTo(TAUGHT_COURSES_URL_PATH))
-                    .willReturn(WireMock.aResponse()
-                                    .withStatus(401)
-                                    .withHeader(WWW_AUTHENTICATE, "Basic realm=\"Unit fs-api\"")
-                                    .withBody(responseBody)));
-
-        final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
+        var appender = LogUtils.getTestingAppenderForRootLogger();
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 
@@ -149,25 +135,54 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         handler.handleRequest(input, output, context);
 
         // verify:
-        final var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
+        assertThat(appender.getMessages(), containsString(PROBLEMS_READING_RESPONSE_FROM_SERVER_MESSAGE));
 
-        assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
+        var gatewayResponse = GatewayResponse.fromOutputStream(output, Problem.class);
+
+        assertEquals(HttpURLConnection.HTTP_BAD_GATEWAY, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
-        assertThat(appender.getMessages(), containsString(LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM + "215"));
+
+        var problem = gatewayResponse.getBodyObject(Problem.class);
+        assertThat(problem.getDetail(), containsString(PROBLEMS_READING_RESPONSE_FROM_SERVER_MESSAGE));
     }
 
     @Test
-    void shouldReturnEmptyListOfCoursesAndLogProblemIfFsReturnsNonSuccess() throws IOException {
+    void shouldReturnBadGatewayAndLogProblemIfFsReturnsNonSuccess() throws IOException {
         // prepare:
         final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
-        final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
 
         stubFor(get(urlPathEqualTo(TAUGHT_COURSES_URL_PATH))
                     .willReturn(WireMock.aResponse()
                                     .withStatus(HttpURLConnection.HTTP_INTERNAL_ERROR)));
 
+        final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
+
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
+
+        // execute:
+        handler.handleRequest(input, output, context);
+
+        // verify:
+        final String expectedMessage =
+            UNEXPECTED_RESPONSE_CODE_RETURNED_BY_SERVER_MESSAGE + HttpURLConnection.HTTP_INTERNAL_ERROR;
+        assertThat(appender.getMessages(), containsString(expectedMessage));
+
+        final var gatewayResponse = GatewayResponse.fromOutputStream(output, Problem.class);
+
+        assertEquals(HttpURLConnection.HTTP_BAD_GATEWAY, gatewayResponse.getStatusCode());
+        assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
+        assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
+
+        var problem = gatewayResponse.getBodyObject(Problem.class);
+        assertThat(problem.getDetail(), containsString(expectedMessage));
+    }
+
+    @Test
+    void shouldReturnEmptyListOfCoursesWhenInstitutionIsNotConfiguredForFsIntegration() throws IOException {
+        // prepare:
+        final InputStream input = createRequest(NON_SUPPORTED_INSTITUTION_PATH);
+
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 
         // execute:
@@ -180,15 +195,12 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
         assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
-        assertThat(appender.getMessages(), containsString(
-            HttpUrlConnectionFsClient.UNEXPECTED_STATUS_CODE_LOG_MESSAGE_PREFIX + "500"));
     }
 
     @Test
-    void shouldReturnEmptyListOfCoursesWhenInstitutionIsNotConfiguredForFsIntegration() throws IOException {
+    void shouldReturnEmptyListOfCoursesWhenInstitutionCodeNotResolvable() throws IOException {
         // prepare:
-        final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper)
-                                      .build();
+        final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper).build();
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment, AFTER_SUMMER);
 

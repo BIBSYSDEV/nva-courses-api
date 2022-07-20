@@ -1,6 +1,5 @@
 package no.sikt.nva.fs.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -9,33 +8,29 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Base64;
+import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.paths.UriWrapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class HttpUrlConnectionFsClient implements FsClient {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(HttpUrlConnectionFsClient.class);
-    public static final  String UNEXPECTED_STATUS_CODE_LOG_MESSAGE_PREFIX = "Unexpected response code from FS: ";
     private static final String TEACHING_URI_PATH = "undervisning";
     private static final String DB_IDENTIFIER_QUERY_PARAM_NAME = "dbId";
     private static final String INSTITUTION_QUERY_PARAM_NAME = "emne.institusjon";
     private static final String YEAR_QUERY_PARAM_NAME = "semester.ar";
     private static final String LIMIT_QUERY_PARAM_NAME = "limit";
     private static final String UNLIMITED = "0";
+    public static final String PROBLEMS_READING_RESPONSE_FROM_SERVER_MESSAGE = "Problems reading response from server";
+    public static final String PROBLEMS_COMMUNICATING_WITH_SERVER_MESSAGE = "Problems communicating with server";
     private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
     private final String baseUri;
     private final int institutionCode;
     private final String username;
     private final String password;
 
-    public HttpUrlConnectionFsClient(final ObjectMapper objectMapper, final String baseUri,
-                                     final int institutionCode, final String username,
+    public HttpUrlConnectionFsClient(final String baseUri, final int institutionCode, final String username,
                                      final String password) {
 
         this.httpClient = HttpClient.newBuilder().build();
-        this.objectMapper = objectMapper;
         this.baseUri = baseUri;
         this.institutionCode = institutionCode;
         this.username = username;
@@ -56,20 +51,28 @@ public class HttpUrlConnectionFsClient implements FsClient {
                                         .GET()
                                         .setHeader("Authorization", getBasicAuthenticationHeader())
                                         .build();
+        final HttpResponse<byte[]> response = sendRequest(request);
+        final int statusCode = response.statusCode();
+        if (statusCode == HttpURLConnection.HTTP_OK) {
+            return convertResponseBody(response.body());
+        } else {
+            throw new HttpStatusException(statusCode);
+        }
+    }
+
+    private FsCollectionResponse convertResponseBody(byte[] body) {
         try {
-            final HttpResponse<byte[]> response = httpClient.send(request, BodyHandlers.ofByteArray());
-            if (response.statusCode() == HttpURLConnection.HTTP_OK) {
-                return objectMapper.readValue(response.body(), FsCollectionResponse.class);
-            } else {
-                final String message = String.format(UNEXPECTED_STATUS_CODE_LOG_MESSAGE_PREFIX + "%d",
-                                                     response.statusCode());
-                LOGGER.error(message);
-                throw new FsClientException(message);
-            }
+            return JsonUtils.dtoObjectMapper.readValue(body, FsCollectionResponse.class);
+        } catch (IOException e) {
+            throw new HttpException(PROBLEMS_READING_RESPONSE_FROM_SERVER_MESSAGE, e);
+        }
+    }
+
+    private HttpResponse<byte[]> sendRequest(HttpRequest request) {
+        try {
+            return httpClient.send(request, BodyHandlers.ofByteArray());
         } catch (IOException | InterruptedException e) {
-            final String message = "Unable to communicate with FS";
-            LOGGER.error(message, e);
-            throw new FsClientException(message, e);
+            throw new HttpException(PROBLEMS_COMMUNICATING_WITH_SERVER_MESSAGE, e);
         }
     }
 

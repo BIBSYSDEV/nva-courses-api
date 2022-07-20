@@ -8,6 +8,7 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.util.Optional;
+import no.sikt.nva.fs.client.HttpException;
 import no.sikt.nva.fs.config.FsConfig;
 import no.sikt.nva.fs.config.InstitutionConfig;
 import no.unit.nva.commons.json.JsonUtils;
@@ -22,6 +23,7 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
 
     public static final ObjectMapper OBJECT_MAPPER = JsonUtils.dtoObjectMapper;
     /* default */ static final String FS_CONFIG_ENV_NAME = "FS_CONFIG";
+
     private final FsConfig fsConfig;
     private final TimeProvider timeProvider;
 
@@ -39,11 +41,13 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
     @Override
     protected CoursesResponse processInput(final Void input,
                                            final RequestInfo requestInfo,
-                                           final Context context) {
+                                           final Context context) throws FailedFsResponseException {
 
-        return getInstitutionCodeOfCurrentlyLoggedInUser(requestInfo)
-                   .map(this::fetchCoursesByInstitutionIfInstitutionConfigPresent)
-                   .orElse(new CoursesResponse());
+        var inst = getInstitutionCodeOfCurrentlyLoggedInUser(requestInfo);
+        if (inst.isPresent()) {
+            return fetchInstitutionCourses(inst.orElseThrow());
+        }
+        return new CoursesResponse();
     }
 
     @Override
@@ -58,18 +62,37 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
                    .orElseThrow();
     }
 
-    private CoursesResponse fetchCoursesByInstitutionIfInstitutionConfigPresent(final int institutionCode) {
+    private CoursesResponse fetchInstitutionCourses(int institutionCode)
+        throws FailedFsResponseException {
+        try {
+            var institution = fetchInstitutionConfig(institutionCode);
+            return fetchCoursesByInstitutionConfig(institution);
+        } catch (InstitutionNotFoundException e) {
+            return new CoursesResponse();
+        }
+    }
+
+    private InstitutionConfig fetchInstitutionConfig(int institutionCode)
+        throws InstitutionNotFoundException {
         return fsConfig.getInstitutions().stream()
                    .filter(inst -> inst.getCode() == institutionCode)
                    .findFirst()
-                   .map(this::fetchCoursesByInstitution)
-                   .orElse(new CoursesResponse());
+                   .orElseThrow(InstitutionNotFoundException::new);
     }
 
-    private CoursesResponse fetchCoursesByInstitution(final InstitutionConfig institutionConfig) {
-        final CoursesProvider coursesProvider = new CoursesProvider(fsConfig.getBaseUri(), institutionConfig);
-        return new CoursesResponse(coursesProvider.getCurrentlyTaughtCourses(timeProvider.getYear(),
-                                                                             timeProvider.getMonthValue()));
+    private FailedFsResponseException handleFsFailingServerResponse(final HttpException httpException) {
+        return new FailedFsResponseException(httpException);
+    }
+
+    private CoursesResponse fetchCoursesByInstitutionConfig(final InstitutionConfig institutionConfig)
+        throws FailedFsResponseException {
+        try {
+            final CoursesProvider coursesProvider = new CoursesProvider(fsConfig.getBaseUri(), institutionConfig);
+            return new CoursesResponse(coursesProvider.getCurrentlyTaughtCourses(timeProvider.getYear(),
+                                                                                 timeProvider.getMonthValue()));
+        } catch (HttpException exception) {
+            throw handleFsFailingServerResponse(exception);
+        }
     }
 
     private Optional<Integer> getInstitutionCodeOfCurrentlyLoggedInUser(final RequestInfo requestInfo) {

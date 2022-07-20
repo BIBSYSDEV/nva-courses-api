@@ -1,10 +1,8 @@
 package no.sikt.nva.fs;
 
-import static no.sikt.nva.fs.CoursesByInstitutionOfLoggedInUserHandler.OBJECT_MAPPER;
 import java.text.Collator;
 import java.time.Month;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -12,20 +10,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import no.sikt.nva.fs.client.FsClient;
+import no.sikt.nva.fs.client.FsCollectionResponse;
 import no.sikt.nva.fs.client.FsCourse;
 import no.sikt.nva.fs.client.FsSemester;
 import no.sikt.nva.fs.client.HttpUrlConnectionFsClient;
 import no.sikt.nva.fs.client.Item;
 import no.sikt.nva.fs.config.InstitutionConfig;
-import nva.commons.core.attempt.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CoursesProvider {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CoursesProvider.class);
-    /* default */ static final String LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM = "Unable to communicate with FS "
-                                                                                    + "API for ";
 
     private final String fsBaseUri;
     private final InstitutionConfig institutionConfig;
@@ -40,7 +36,7 @@ public class CoursesProvider {
 
         LOGGER.debug("Fetching courses by institution '{}' from FS", institutionConfig.getCode());
 
-        final FsClient fsClient = new HttpUrlConnectionFsClient(OBJECT_MAPPER, fsBaseUri, institutionConfig.getCode(),
+        final FsClient fsClient = new HttpUrlConnectionFsClient(fsBaseUri, institutionConfig.getCode(),
                                                                 institutionConfig.getUsername(),
                                                                 institutionConfig.getPassword());
 
@@ -76,19 +72,14 @@ public class CoursesProvider {
                                                             final List<Term> terms) {
         final List<String> termCodes = terms.stream().map(Term::getCode).collect(Collectors.toList());
 
-        return Try.attempt(() -> fsClient.getTaughtCourses(year)
-                                     .getItems()
-                                     .stream()
-                                     .map(this::asCourse)
-                                     .filter(course -> termCodes.contains(course.getTerm()))
-                                     .sorted(courseComparator)
-                                     .collect(Collectors.toList()))
-                   .orElse((failure) -> {
-                       final String message = String.format(LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM + "%d",
-                                                            institutionConfig.getCode());
-                       LOGGER.warn(message, failure.getException());
-                       return Collections.<Course>emptyList();
-                   });
+        final FsCollectionResponse response = fsClient.getTaughtCourses(year);
+        return response
+                   .getItems()
+                   .stream()
+                   .map(this::asCourse)
+                   .filter(course -> termCodes.contains(course.getTerm()))
+                   .sorted(courseComparator)
+                   .collect(Collectors.toList());
     }
 
     private Course asCourse(final Item item) {
