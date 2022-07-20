@@ -1,6 +1,6 @@
 package no.sikt.nva.fs;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static no.sikt.nva.fs.CoursesByInstitutionOfLoggedInUserHandler.OBJECT_MAPPER;
 import java.text.Collator;
 import java.time.Month;
 import java.util.ArrayList;
@@ -27,23 +27,20 @@ public class CoursesProvider {
     /* default */ static final String LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM = "Unable to communicate with FS "
                                                                                     + "API for ";
 
-    private final ObjectMapper objectMapper;
     private final String fsBaseUri;
     private final InstitutionConfig institutionConfig;
 
-    public CoursesProvider(final ObjectMapper objectMapper, final String fsBaseUri,
-                           final InstitutionConfig institutionConfig) {
+    public CoursesProvider(final String fsBaseUri, final InstitutionConfig institutionConfig) {
 
-        this.objectMapper = objectMapper;
         this.fsBaseUri = fsBaseUri;
         this.institutionConfig = institutionConfig;
     }
 
-    public Course[] getCurrentlyTaughtCourses(final int year, final int month) {
+    public List<Course> getCurrentlyTaughtCourses(final int year, final int month) {
 
         LOGGER.debug("Fetching courses by institution '{}' from FS", institutionConfig.getCode());
 
-        final FsClient fsClient = new HttpUrlConnectionFsClient(objectMapper, fsBaseUri, institutionConfig.getCode(),
+        final FsClient fsClient = new HttpUrlConnectionFsClient(OBJECT_MAPPER, fsBaseUri, institutionConfig.getCode(),
                                                                 institutionConfig.getUsername(),
                                                                 institutionConfig.getPassword());
 
@@ -56,7 +53,7 @@ public class CoursesProvider {
         yearsToTerms.forEach((entryYear, terms) -> courses.addAll(
             fetchCoursesForYearFilteringOnTerm(fsClient, courseComparator, entryYear, terms)));
 
-        return courses.toArray(new Course[0]);
+        return courses;
     }
 
     private Map<Integer, List<Term>> findRelevantYearsAndTerms(final int year, final int month) {

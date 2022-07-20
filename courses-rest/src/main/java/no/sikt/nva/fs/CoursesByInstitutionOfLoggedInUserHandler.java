@@ -18,69 +18,69 @@ import nva.commons.core.JacocoGenerated;
 import nva.commons.core.attempt.Try;
 import nva.commons.core.paths.UriWrapper;
 
-public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, Course[]> {
-    
+public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, CoursesResponse> {
+
     public static final ObjectMapper OBJECT_MAPPER = JsonUtils.dtoObjectMapper;
     /* default */ static final String FS_CONFIG_ENV_NAME = "FS_CONFIG";
     private final FsConfig fsConfig;
     private final TimeProvider timeProvider;
-    
+
     @JacocoGenerated
     public CoursesByInstitutionOfLoggedInUserHandler() {
         this(new Environment(), Clock.system(ZoneId.systemDefault()));
     }
-    
+
     public CoursesByInstitutionOfLoggedInUserHandler(final Environment environment, final Clock clock) {
         super(Void.class, environment);
         this.timeProvider = new TimeProvider(clock);
         this.fsConfig = readFsConfig();
     }
-    
+
     @Override
-    protected Course[] processInput(final Void input,
-                                    final RequestInfo requestInfo,
-                                    final Context context) {
-        
+    protected CoursesResponse processInput(final Void input,
+                                           final RequestInfo requestInfo,
+                                           final Context context) {
+
         return getInstitutionCodeOfCurrentlyLoggedInUser(requestInfo)
-            .map(this::fetchCoursesByInstitutionIfInstitutionConfigPresent)
-            .orElse(new Course[0]);
+                   .map(this::fetchCoursesByInstitutionIfInstitutionConfigPresent)
+                   .orElse(new CoursesResponse());
     }
-    
+
     @Override
-    protected Integer getSuccessStatusCode(Void input, Course[] output) {
+    protected Integer getSuccessStatusCode(Void input, CoursesResponse output) {
         return HttpURLConnection.HTTP_OK;
     }
-    
+
     private FsConfig readFsConfig() {
         return environment.readEnvOpt(FS_CONFIG_ENV_NAME)
-            .map(attempt(configString -> OBJECT_MAPPER.readValue(configString, FsConfig.class)))
-            .map(Try::orElseThrow)
-            .orElseThrow();
+                   .map(attempt(configString -> OBJECT_MAPPER.readValue(configString, FsConfig.class)))
+                   .map(Try::orElseThrow)
+                   .orElseThrow();
     }
-    
-    private Course[] fetchCoursesByInstitutionIfInstitutionConfigPresent(final int institutionCode) {
+
+    private CoursesResponse fetchCoursesByInstitutionIfInstitutionConfigPresent(final int institutionCode) {
         return fsConfig.getInstitutions().stream()
-            .filter(inst -> inst.getCode() == institutionCode)
-            .findFirst()
-            .map(this::fetchCoursesByInstitution)
-            .orElse(new Course[0]);
+                   .filter(inst -> inst.getCode() == institutionCode)
+                   .findFirst()
+                   .map(this::fetchCoursesByInstitution)
+                   .orElse(new CoursesResponse());
     }
-    
-    private Course[] fetchCoursesByInstitution(final InstitutionConfig institutionConfig) {
-        final CoursesProvider coursesProvider = new CoursesProvider(OBJECT_MAPPER, fsConfig.getBaseUri(),
-            institutionConfig);
-        return coursesProvider.getCurrentlyTaughtCourses(timeProvider.getYear(), timeProvider.getMonthValue());
+
+    private CoursesResponse fetchCoursesByInstitution(final InstitutionConfig institutionConfig) {
+        final CoursesProvider coursesProvider = new CoursesProvider(fsConfig.getBaseUri(), institutionConfig);
+        return new CoursesResponse(coursesProvider.getCurrentlyTaughtCourses(timeProvider.getYear(),
+                                                                             timeProvider.getMonthValue()));
     }
-    
+
     private Optional<Integer> getInstitutionCodeOfCurrentlyLoggedInUser(final RequestInfo requestInfo) {
         // We do not want to pick the FS institution code off the organizational URI like this, but
         // rather make it available directly in the RequestInfo object itself. Until this is supported,
         // we leave this as technical dept.
         final Optional<URI> topLevelOrgCristinId = requestInfo.getTopLevelOrgCristinId();
-        
+
         if (topLevelOrgCristinId.isPresent()) {
             final String lastPathElement = UriWrapper.fromUri(topLevelOrgCristinId.get())
-                .getLastPathElement();
+                                               .getLastPathElement();
             final String[] parts = lastPathElement.split("\\.");
             return Optional.of(Integer.parseInt(parts[0]));
         } else {

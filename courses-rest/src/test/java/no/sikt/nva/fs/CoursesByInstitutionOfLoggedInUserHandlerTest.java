@@ -11,9 +11,9 @@ import static com.google.common.net.HttpHeaders.WWW_AUTHENTICATE;
 import static no.sikt.nva.fs.CoursesProvider.LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM;
 import static no.sikt.nva.fs.TestConfig.restApiMapper;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.collection.ArrayMatching.arrayContaining;
-import static org.hamcrest.collection.IsArrayWithSize.arrayWithSize;
-import static org.hamcrest.collection.IsArrayWithSize.emptyArray;
+import static org.hamcrest.collection.IsEmptyIterable.emptyIterable;
+import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
+import static org.hamcrest.collection.IsIterableWithSize.iterableWithSize;
 import static org.hamcrest.collection.IsMapContaining.hasKey;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,6 +31,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import no.sikt.nva.fs.client.HttpUrlConnectionFsClient;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -98,12 +99,12 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         handler.handleRequest(input, output, context);
 
         // verify:
-        var gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+        var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
 
         assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertThat(gatewayResponse.getBodyObject(Course[].class), emptyArray());
+        assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
     }
 
     @Test
@@ -120,12 +121,12 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         handler.handleRequest(input, output, context);
 
         // verify:
-        var gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+        var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
 
         assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertThat(gatewayResponse.getBodyObject(Course[].class), emptyArray());
+        assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
     }
 
     @Test
@@ -148,12 +149,12 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         handler.handleRequest(input, output, context);
 
         // verify:
-        final GatewayResponse<Course[]> gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+        final var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
 
         assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertThat(gatewayResponse.getBodyObject(Course[].class), emptyArray());
+        assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
         assertThat(appender.getMessages(), containsString(LOG_MESSAGE_PREFIX_FS_COMMUNICATION_PROBLEM + "215"));
     }
 
@@ -173,12 +174,12 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         handler.handleRequest(input, output, context);
 
         // verify:
-        final GatewayResponse<Course[]> gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+        final var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
 
         assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertThat(gatewayResponse.getBodyObject(Course[].class), emptyArray());
+        assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
         assertThat(appender.getMessages(), containsString(
             HttpUrlConnectionFsClient.UNEXPECTED_STATUS_CODE_LOG_MESSAGE_PREFIX + "500"));
     }
@@ -195,12 +196,12 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         handler.handleRequest(input, output, context);
 
         // verify:
-        final GatewayResponse<Course[]> gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+        final var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
 
         assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
-        assertThat(gatewayResponse.getBodyObject(Course[].class), emptyArray());
+        assertThat(gatewayResponse.getBodyObject(CoursesResponse.class).getCourses(), emptyIterable());
     }
 
     @Test
@@ -217,19 +218,19 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         handler.handleRequest(input, output, context);
 
         // verify:
-        final GatewayResponse<Course[]> gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+        final var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
 
         assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
 
-        final Course[] courses = gatewayResponse.getBodyObject(Course[].class);
-        assertThat(courses, arrayWithSize(5));
-        assertThat(courses, arrayContaining(COURSE_A_AUTUMN_2022,
-                                            COURSE_AE_AUTUMN_2022,
-                                            COURSE_A_SPRING_2023,
-                                            COURSE_OE_SPRING_2023,
-                                            COURSE_AA_SPRING_2023));
+        final var response = gatewayResponse.getBodyObject(CoursesResponse.class);
+        assertThat(response.getCourses(), iterableWithSize(5));
+        assertThat(response.getCourses(), contains(COURSE_A_AUTUMN_2022,
+                                                   COURSE_AE_AUTUMN_2022,
+                                                   COURSE_A_SPRING_2023,
+                                                   COURSE_OE_SPRING_2023,
+                                                   COURSE_AA_SPRING_2023));
     }
 
     @Test
@@ -246,19 +247,19 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         handler.handleRequest(input, output, context);
 
         // verify:
-        final GatewayResponse<Course[]> gatewayResponse = GatewayResponse.fromOutputStream(output, Course[].class);
+        final var gatewayResponse = GatewayResponse.fromOutputStream(output, CoursesResponse.class);
 
         assertEquals(HttpURLConnection.HTTP_OK, gatewayResponse.getStatusCode());
         assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
         assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
 
-        final Course[] courses = gatewayResponse.getBodyObject(Course[].class);
-        assertThat(courses, arrayWithSize(5));
-        assertThat(courses, arrayContaining(COURSE_B_SPRING_2022,
-                                            COURSE_OE_SPRING_2022,
-                                            COURSE_AA_SPRING_2022,
-                                            COURSE_A_AUTUMN_2022,
-                                            COURSE_AE_AUTUMN_2022));
+        final List<Course> courses = gatewayResponse.getBodyObject(CoursesResponse.class).getCourses();
+        assertThat(courses, iterableWithSize(5));
+        assertThat(courses, contains(COURSE_B_SPRING_2022,
+                                     COURSE_OE_SPRING_2022,
+                                     COURSE_AA_SPRING_2022,
+                                     COURSE_A_AUTUMN_2022,
+                                     COURSE_AE_AUTUMN_2022));
     }
 
     private InputStream createRequest(String institutionPath)

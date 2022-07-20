@@ -2,9 +2,11 @@ package no.sikt.nva.fs;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.util.Objects;
 import nva.commons.core.JacocoGenerated;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public final class Course {
 
     private final String code;
