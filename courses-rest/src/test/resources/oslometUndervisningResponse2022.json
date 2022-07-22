@@ -1,0 +1,103 @@
+{
+  "href": "https://api.fellesstudentsystem.no/undervisning",
+  "rel": [
+    "collection"
+  ],
+  "page": 1,
+  "limit": 0,
+  "size": 3,
+  "first": {
+    "href": "https://api.fellesstudentsystem.no/undervisning?emne.institusjon=215&semester.ar=2022&page=1&limit=0",
+    "rel": [
+      "collection"
+    ]
+  },
+  "last": {
+    "href": "https://api.fellesstudentsystem.no/undervisning?emne.institusjon=215&semester.ar=2022&page=1&limit=0",
+    "rel": [
+      "collection"
+    ]
+  },
+  "items": [
+    {
+      "id": {
+        "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%85,1,2022,V%C3%85R,1",
+        "emne": {
+          "href": "https://api.fellesstudentsystem.no/emner/215,%C3%85,1",
+          "institusjon": 215,
+          "kode": "Å",
+          "versjon": "1"
+        },
+        "semester": {
+          "href": "https://api.fellesstudentsystem.no/semestre/2022,V%C3%85R",
+          "ar": 2022,
+          "termin": "VÅR"
+        }
+      }
+    },
+    {
+      "id": {
+        "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%98,1,2022,V%C3%85R,1",
+        "emne": {
+          "href": "https://api.fellesstudentsystem.no/emner/215,%C3%98,1",
+          "institusjon": 215,
+          "kode": "Ø",
+          "versjon": "1"
+        },
+        "semester": {
+          "href": "https://api.fellesstudentsystem.no/semestre/2022,V%C3%85R",
+          "ar": 2022,
+          "termin": "VÅR"
+        }
+      }
+    },
+    {
+      "id": {
+        "href": "https://api.fellesstudentsystem.no/undervisning/215,B,1,2022,V%C3%85R,1",
+        "emne": {
+          "href": "https://api.fellesstudentsystem.no/emner/215,B,1",
+          "institusjon": 215,
+          "kode": "B",
+          "versjon": "1"
+        },
+        "semester": {
+          "href": "https://api.fellesstudentsystem.no/semestre/2022,V%C3%85R",
+          "ar": 2022,
+          "termin": "VÅR"
+        }
+      }
+    },
+    {
+      "id": {
+        "href": "https://api.fellesstudentsystem.no/undervisning/215,%C3%86,1,2022,H%C3%98ST,1",
+        "emne": {
+          "href": "https://api.fellesstudentsystem.no/emner/215,%C3%86,1",
+          "institusjon": 215,
+          "kode": "Æ",
+          "versjon": "1"
+        },
+        "semester": {
+          "href": "https://api.fellesstudentsystem.no/semestre/2022,H%C3%98ST",
+          "ar": 2022,
+          "termin": "HØST"
+        }
+      }
+    },
+    {
+      "id": {
+        "href": "https://api.fellesstudentsystem.no/undervisning/215,A,1,2022,H%C3%98ST,1",
+        "emne": {
+          "href": "https://api.fellesstudentsystem.no/emner/215,A,1",
+          "institusjon": 215,
+          "kode": "A",
+          "versjon": "1"
+        },
+        "semester": {
+          "href": "https://api.fellesstudentsystem.no/semestre/2022,H%C3%98ST",
+          "ar": 2022,
+          "termin": "HØST"
+        }
+      }
+    }
+  ]
+}

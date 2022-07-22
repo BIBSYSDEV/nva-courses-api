@@ -1,0 +1,10 @@
+{
+  "baseUri": "@@BASE_URI@@",
+  "institutions": [
+    {
+      "code": 215,
+      "username": "dummyUsername",
+      "password": "dummyPassword"
+    }
+  ]
+}
