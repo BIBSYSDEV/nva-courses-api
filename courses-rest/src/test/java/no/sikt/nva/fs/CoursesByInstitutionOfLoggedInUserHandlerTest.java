@@ -120,7 +120,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     }
 
     @Test
-    void shouldReturnEmptyListOfCoursesAndLogProblemIfFsReturnsInvalidData() throws IOException {
+    void shouldReturnBadGatewayAndLogProblemIfFsReturnsInvalidData() throws IOException {
         // prepare:
         final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
 
