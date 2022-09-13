@@ -1,5 +1,5 @@
 [versions]
-nva = { strictly = "1.24.18" }
+nva = { strictly = "1.25.6" }
 jacksonVersion = { strictly = "2.13.3" }
 jakartaVersion = { strictly = "2.1.6" }
 awsSdk2Version = { strictly = "2.17.191" }

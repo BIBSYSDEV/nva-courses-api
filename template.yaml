@@ -12,9 +12,9 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: URI to the OAUTH endpoint of the Cognito client
     Default: /NVA/CognitoUri
-  FsConfig:
-    Type: String
-    Default: "{{resolve:secretsmanager:fs-config}}"
+  FsConfigSecretName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: 'fs-config'
   ApiDomain:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: The Api domain

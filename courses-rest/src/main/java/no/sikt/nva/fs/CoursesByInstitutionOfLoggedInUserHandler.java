@@ -1,8 +1,6 @@
 package no.sikt.nva.fs;
 
-import static nva.commons.core.attempt.Try.attempt;
 import com.amazonaws.services.lambda.runtime.Context;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.Clock;
@@ -11,31 +9,31 @@ import java.util.Optional;
 import no.sikt.nva.fs.client.HttpException;
 import no.sikt.nva.fs.config.FsConfig;
 import no.sikt.nva.fs.config.InstitutionConfig;
-import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-import nva.commons.core.attempt.Try;
 import nva.commons.core.paths.UriWrapper;
+import nva.commons.secrets.SecretsReader;
 
 public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, CoursesResponse> {
 
-    public static final ObjectMapper OBJECT_MAPPER = JsonUtils.dtoObjectMapper;
-    /* default */ static final String FS_CONFIG_ENV_NAME = "FS_CONFIG";
+    /* default */ static final String FS_CONFIG_SECRET_NAME_ENV_NAME = "FsConfigSecretName";
 
-    private final FsConfig fsConfig;
     private final TimeProvider timeProvider;
+    private final SecretsReader secretsReader;
 
     @JacocoGenerated
     public CoursesByInstitutionOfLoggedInUserHandler() {
-        this(new Environment(), Clock.system(ZoneId.systemDefault()));
+        this(new Environment(), new SecretsReader(), Clock.system(ZoneId.systemDefault()));
     }
 
-    public CoursesByInstitutionOfLoggedInUserHandler(final Environment environment, final Clock clock) {
+    public CoursesByInstitutionOfLoggedInUserHandler(final Environment environment,
+                                                     final SecretsReader secretsReader,
+                                                     final Clock clock) {
         super(Void.class, environment);
         this.timeProvider = new TimeProvider(clock);
-        this.fsConfig = readFsConfig();
+        this.secretsReader = secretsReader;
     }
 
     @Override
@@ -55,24 +53,18 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
         return HttpURLConnection.HTTP_OK;
     }
 
-    private FsConfig readFsConfig() {
-        return environment.readEnvOpt(FS_CONFIG_ENV_NAME)
-                   .map(attempt(configString -> OBJECT_MAPPER.readValue(configString, FsConfig.class)))
-                   .map(Try::orElseThrow)
-                   .orElseThrow();
-    }
-
-    private CoursesResponse fetchInstitutionCourses(int institutionCode)
-        throws FailedFsResponseException {
+    private CoursesResponse fetchInstitutionCourses(int institutionCode) throws FailedFsResponseException {
+        final FsConfig fsConfig =
+            secretsReader.fetchPlainTextJsonSecret(environment.readEnv(FS_CONFIG_SECRET_NAME_ENV_NAME), FsConfig.class);
         try {
-            var institution = fetchInstitutionConfig(institutionCode);
-            return fetchCoursesByInstitutionConfig(institution);
+            var institution = fetchInstitutionConfig(fsConfig, institutionCode);
+            return fetchCoursesByInstitutionConfig(fsConfig.getBaseUri(), institution);
         } catch (InstitutionNotFoundException e) {
             return new CoursesResponse();
         }
     }
 
-    private InstitutionConfig fetchInstitutionConfig(int institutionCode)
+    private InstitutionConfig fetchInstitutionConfig(FsConfig fsConfig, int institutionCode)
         throws InstitutionNotFoundException {
         return fsConfig.getInstitutions().stream()
                    .filter(inst -> inst.getCode() == institutionCode)
@@ -84,10 +76,11 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
         return new FailedFsResponseException(httpException);
     }
 
-    private CoursesResponse fetchCoursesByInstitutionConfig(final InstitutionConfig institutionConfig)
+    private CoursesResponse fetchCoursesByInstitutionConfig(final String fsBaseUri,
+                                                            final InstitutionConfig institutionConfig)
         throws FailedFsResponseException {
         try {
-            final CoursesProvider coursesProvider = new CoursesProvider(fsConfig.getBaseUri(), institutionConfig);
+            final CoursesProvider coursesProvider = new CoursesProvider(fsBaseUri, institutionConfig);
             return new CoursesResponse(coursesProvider.getCurrentlyTaughtCourses(timeProvider.getYear(),
                                                                                  timeProvider.getMonthValue()));
         } catch (HttpException exception) {
