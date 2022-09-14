@@ -84,13 +84,13 @@ Resources:
         Variables:
           FsConfigSecretName: !Ref FsConfigSecretName
           ALLOWED_ORIGIN: '*'
-    Events:
-      FetchCurrentlyTaughtCourses:
-        Type: Api
-        Properties:
-          Path: /
-          Method: get
-          RestApiId: !Ref NvaCoursesApi
+      Events:
+        FetchCurrentlyTaughtCourses:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+            RestApiId: !Ref NvaCoursesApi
 
   NvaCoursesApi:
     Type: AWS::Serverless::Api
