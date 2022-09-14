@@ -1,5 +1,6 @@
 package no.sikt.nva.fs.config;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class InstitutionConfig {
@@ -8,6 +9,7 @@ public class InstitutionConfig {
     private final String username;
     private final String password;
 
+    @JsonCreator
     public InstitutionConfig(@JsonProperty("code") final int code,
                              @JsonProperty("username") final String username,
                              @JsonProperty("password") final String password) {
