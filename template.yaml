@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  Lambda creating handle for publications
+Description: Lambda for listing currently taught courses for the institution the currently logged in user belongs to.
 
 Parameters:
   CognitoAuthorizerArn:
@@ -73,7 +72,7 @@ Resources:
                     - secretsmanager:DescribeSecret
                     - secretsmanager:ListSecretVersionIds
                   Resource:
-                    - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:fs-config'
+                    - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${FsConfigSecretName}'
 
   CurrentlyTaughtCoursesFunction:
     Type: AWS::Serverless::Function
@@ -83,10 +82,10 @@ Resources:
       Role: !GetAtt CurrentlyTaughtCoursesFunctionRole.Arn
       Environment:
         Variables:
-          FS_CONFIG: !Ref FsConfig
+          FsConfigSecretName: !Ref FsConfigSecretName
           ALLOWED_ORIGIN: '*'
     Events:
-      GetEvent:
+      FetchCurrentlyTaughtCourses:
         Type: Api
         Properties:
           Path: /

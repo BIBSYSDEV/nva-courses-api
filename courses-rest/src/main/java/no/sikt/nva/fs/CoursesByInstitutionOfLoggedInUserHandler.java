@@ -1,6 +1,7 @@
 package no.sikt.nva.fs;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.Clock;
@@ -9,8 +10,10 @@ import java.util.Optional;
 import no.sikt.nva.fs.client.HttpException;
 import no.sikt.nva.fs.config.FsConfig;
 import no.sikt.nva.fs.config.InstitutionConfig;
+import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
+import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.paths.UriWrapper;
@@ -19,6 +22,9 @@ import nva.commons.secrets.SecretsReader;
 public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, CoursesResponse> {
 
     /* default */ static final String FS_CONFIG_SECRET_NAME_ENV_NAME = "FsConfigSecretName";
+    /* default */ static final String FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON = "FS configuration from secrets manager "
+                                                                              + "does not contain properly formatted "
+                                                                              + "JSON!";
 
     private final TimeProvider timeProvider;
     private final SecretsReader secretsReader;
@@ -39,7 +45,7 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
     @Override
     protected CoursesResponse processInput(final Void input,
                                            final RequestInfo requestInfo,
-                                           final Context context) throws FailedFsResponseException {
+                                           final Context context) throws ApiGatewayException {
 
         var inst = getInstitutionCodeOfCurrentlyLoggedInUser(requestInfo);
         if (inst.isPresent()) {
@@ -53,15 +59,22 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
         return HttpURLConnection.HTTP_OK;
     }
 
-    private CoursesResponse fetchInstitutionCourses(int institutionCode) throws FailedFsResponseException {
-        final FsConfig fsConfig =
-            secretsReader.fetchPlainTextJsonSecret(environment.readEnv(FS_CONFIG_SECRET_NAME_ENV_NAME), FsConfig.class);
+    private CoursesResponse fetchInstitutionCourses(int institutionCode) throws ApiGatewayException {
+        var fsConfigSecretName = environment.readEnv(FS_CONFIG_SECRET_NAME_ENV_NAME);
+        var fsConfigAsString = secretsReader.fetchPlainTextSecret(fsConfigSecretName);
         try {
+            var fsConfig = parseFsConfigJson(fsConfigAsString);
             var institution = fetchInstitutionConfig(fsConfig, institutionCode);
             return fetchCoursesByInstitutionConfig(fsConfig.getBaseUri(), institution);
         } catch (InstitutionNotFoundException e) {
             return new CoursesResponse();
+        } catch (JsonProcessingException e) {
+            throw new SecretFormatException(e, FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON);
         }
+    }
+
+    private static FsConfig parseFsConfigJson(String jsonAsString) throws JsonProcessingException {
+        return JsonUtils.dtoObjectMapper.readValue(jsonAsString, FsConfig.class);
     }
 
     private InstitutionConfig fetchInstitutionConfig(FsConfig fsConfig, int institutionCode)

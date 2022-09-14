@@ -7,10 +7,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.google.common.net.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static com.google.common.net.HttpHeaders.AUTHORIZATION;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
+import static no.sikt.nva.fs.CoursesByInstitutionOfLoggedInUserHandler.FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON;
 import static no.sikt.nva.fs.TestConfig.restApiMapper;
 import static no.sikt.nva.fs.client.HttpStatusException.UNEXPECTED_RESPONSE_CODE_RETURNED_BY_SERVER_MESSAGE;
 import static no.sikt.nva.fs.client.HttpUrlConnectionFsClient.PROBLEMS_COMMUNICATING_WITH_SERVER_MESSAGE;
 import static no.sikt.nva.fs.client.HttpUrlConnectionFsClient.PROBLEMS_READING_RESPONSE_FROM_SERVER_MESSAGE;
+import static nva.commons.core.StringUtils.EMPTY_STRING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsEmptyIterable.emptyIterable;
 import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
@@ -49,6 +51,7 @@ import org.zalando.problem.Problem;
 
 @WireMockTest
 class CoursesByInstitutionOfLoggedInUserHandlerTest {
+
     private static final String FS_CONFIG_SECRET_NAME = "fs-config";
     public static final Clock AFTER_SUMMER = Clock.fixed(Instant.parse("2022-08-10T10:15:30.00Z"),
                                                          TimeProvider.ZONE_ID);
@@ -96,14 +99,35 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     }
 
     @Test
-    void shouldReturnBadGatewayIfFsIsUnavailable(final WireMockRuntimeInfo wmRuntimeInfo) throws IOException {
+    void shouldReturnInternalServerErrorAndLogsWhenFsConfigSecretIsNotProperlyFormattedJson() throws IOException {
+        fakeSecretsManagerClient.putPlainTextSecret(FS_CONFIG_SECRET_NAME, EMPTY_STRING);
+
+        final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
+        var appender = LogUtils.getTestingAppenderForRootLogger();
+
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
+                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     AFTER_SUMMER);
+        handler.handleRequest(input, output, context);
+
+        // verify:
+        assertThat(appender.getMessages(), containsString(FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON));
+
+        var gatewayResponse = GatewayResponse.fromOutputStream(output, Problem.class);
+
+        assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, gatewayResponse.getStatusCode());
+        assertThat(gatewayResponse.getHeaders(), hasKey(CONTENT_TYPE));
+        assertThat(gatewayResponse.getHeaders(), hasKey(ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
+    @Test
+    void shouldReturnBadGatewayIfFsIsUnavailable() throws IOException {
         // prepare:
         final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
 
         // we override port of wiremock to simulate FS unavailability:
         var fsConfigStringTemplate = IoUtils.stringFromResources(Path.of("fsConfig.json"));
-        var fsConfigJsonAsString = fsConfigStringTemplate.replace("@@BASE_URI@@",
-                                                   "http://localhost:" + wmRuntimeInfo.getHttpPort() + 1);
+        var fsConfigJsonAsString = fsConfigStringTemplate.replace("@@BASE_URI@@", "http://localhost:9090");
         fakeSecretsManagerClient.putPlainTextSecret(FS_CONFIG_SECRET_NAME, fsConfigJsonAsString);
 
         var appender = LogUtils.getTestingAppenderForRootLogger();
