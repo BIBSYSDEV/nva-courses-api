@@ -69,7 +69,7 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
         } catch (InstitutionNotFoundException e) {
             return new CoursesResponse();
         } catch (JsonProcessingException e) {
-            throw new SecretFormatException(e, FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON);
+            throw new RuntimeException(FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON, e);
         }
     }
 
