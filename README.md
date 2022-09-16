@@ -19,9 +19,9 @@ available from the framework eventually.
 ### Required configuration
 The following configuration must be made available in the Secrets Manager in the AWS account
 where it will be deployed:
-Key: ```fs-config```
+Secret name: ```fs-config```
 
-Value:
+Plaintext value:
 ```json
 {
   "baseUri": "https://api.fellesstudentsystem.no",
