@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  Lambda creating handle for publications
+Description: Lambda for listing currently taught courses for the institution the currently logged in user belongs to.
 
 Parameters:
   CognitoAuthorizerArn:
@@ -12,9 +11,6 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: URI to the OAUTH endpoint of the Cognito client
     Default: /NVA/CognitoUri
-  FsConfig:
-    Type: String
-    Default: "{{resolve:secretsmanager:fs-config}}"
   ApiDomain:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: The Api domain
@@ -62,6 +58,18 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*'
+        - PolicyName: SecretPermissions
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - secretsmanager:GetResourcePolicy
+                    - secretsmanager:GetSecretValue
+                    - secretsmanager:DescribeSecret
+                    - secretsmanager:ListSecretVersionIds
+                  Resource:
+                    - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:fs-config'
 
   CurrentlyTaughtCoursesFunction:
     Type: AWS::Serverless::Function
@@ -71,15 +79,14 @@ Resources:
       Role: !GetAtt CurrentlyTaughtCoursesFunctionRole.Arn
       Environment:
         Variables:
-          FS_CONFIG: !Ref FsConfig
           ALLOWED_ORIGIN: '*'
-    Events:
-      GetEvent:
-        Type: Api
-        Properties:
-          Path: /
-          Method: get
-          RestApiId: !Ref NvaCoursesApi
+      Events:
+        FetchCurrentlyTaughtCourses:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+            RestApiId: !Ref NvaCoursesApi
 
   NvaCoursesApi:
     Type: AWS::Serverless::Api

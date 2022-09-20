@@ -1,4 +1,3 @@
-
 dependencies {
     api(libs.nva.datamodel) {
         exclude group: 'com.github.bibsysdev', module: 'nva-commons'
@@ -8,8 +7,10 @@ dependencies {
     implementation libs.nva.core
     implementation libs.nva.events
     implementation libs.nva.apigateway
+    implementation libs.nva.secrets
 
     implementation libs.aws.lambda.java.core
+    implementation libs.aws.sdk2.secrets
     implementation libs.bundles.logging
 
     implementation libs.bundles.jackson

@@ -1,8 +1,7 @@
 package no.sikt.nva.fs;
 
-import static nva.commons.core.attempt.Try.attempt;
 import com.amazonaws.services.lambda.runtime.Context;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.Clock;
@@ -14,34 +13,40 @@ import no.sikt.nva.fs.config.InstitutionConfig;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
+import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-import nva.commons.core.attempt.Try;
 import nva.commons.core.paths.UriWrapper;
+import nva.commons.secrets.SecretsReader;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, CoursesResponse> {
 
-    public static final ObjectMapper OBJECT_MAPPER = JsonUtils.dtoObjectMapper;
-    /* default */ static final String FS_CONFIG_ENV_NAME = "FS_CONFIG";
+    /* default */ static final String FS_CONFIG_SECRET_NAME = "fs-config";
+    /* default */ static final String FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON = "FS configuration from secrets manager "
+                                                                              + "does not contain properly formatted "
+                                                                              + "JSON!";
 
-    private final FsConfig fsConfig;
     private final TimeProvider timeProvider;
+    private final SecretsReader secretsReader;
 
     @JacocoGenerated
     public CoursesByInstitutionOfLoggedInUserHandler() {
-        this(new Environment(), Clock.system(ZoneId.systemDefault()));
+        this(new Environment(), SecretsReader.defaultSecretsManagerClient(), Clock.system(ZoneId.systemDefault()));
     }
 
-    public CoursesByInstitutionOfLoggedInUserHandler(final Environment environment, final Clock clock) {
+    public CoursesByInstitutionOfLoggedInUserHandler(final Environment environment,
+                                                     final SecretsManagerClient secretsManagerClient,
+                                                     final Clock clock) {
         super(Void.class, environment);
         this.timeProvider = new TimeProvider(clock);
-        this.fsConfig = readFsConfig();
+        this.secretsReader = new SecretsReader(secretsManagerClient);
     }
 
     @Override
     protected CoursesResponse processInput(final Void input,
                                            final RequestInfo requestInfo,
-                                           final Context context) throws FailedFsResponseException {
+                                           final Context context) throws ApiGatewayException {
 
         var inst = getInstitutionCodeOfCurrentlyLoggedInUser(requestInfo);
         if (inst.isPresent()) {
@@ -55,24 +60,24 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
         return HttpURLConnection.HTTP_OK;
     }
 
-    private FsConfig readFsConfig() {
-        return environment.readEnvOpt(FS_CONFIG_ENV_NAME)
-                   .map(attempt(configString -> OBJECT_MAPPER.readValue(configString, FsConfig.class)))
-                   .map(Try::orElseThrow)
-                   .orElseThrow();
-    }
-
-    private CoursesResponse fetchInstitutionCourses(int institutionCode)
-        throws FailedFsResponseException {
+    private CoursesResponse fetchInstitutionCourses(int institutionCode) throws ApiGatewayException {
+        var fsConfigAsString = secretsReader.fetchPlainTextSecret(FS_CONFIG_SECRET_NAME);
         try {
-            var institution = fetchInstitutionConfig(institutionCode);
-            return fetchCoursesByInstitutionConfig(institution);
+            var fsConfig = parseFsConfigJson(fsConfigAsString);
+            var institution = fetchInstitutionConfig(fsConfig, institutionCode);
+            return fetchCoursesByInstitutionConfig(fsConfig.getBaseUri(), institution);
         } catch (InstitutionNotFoundException e) {
             return new CoursesResponse();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON, e);
         }
     }
 
-    private InstitutionConfig fetchInstitutionConfig(int institutionCode)
+    private static FsConfig parseFsConfigJson(String jsonAsString) throws JsonProcessingException {
+        return JsonUtils.dtoObjectMapper.readValue(jsonAsString, FsConfig.class);
+    }
+
+    private InstitutionConfig fetchInstitutionConfig(FsConfig fsConfig, int institutionCode)
         throws InstitutionNotFoundException {
         return fsConfig.getInstitutions().stream()
                    .filter(inst -> inst.getCode() == institutionCode)
@@ -84,10 +89,11 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
         return new FailedFsResponseException(httpException);
     }
 
-    private CoursesResponse fetchCoursesByInstitutionConfig(final InstitutionConfig institutionConfig)
+    private CoursesResponse fetchCoursesByInstitutionConfig(final String fsBaseUri,
+                                                            final InstitutionConfig institutionConfig)
         throws FailedFsResponseException {
         try {
-            final CoursesProvider coursesProvider = new CoursesProvider(fsConfig.getBaseUri(), institutionConfig);
+            final CoursesProvider coursesProvider = new CoursesProvider(fsBaseUri, institutionConfig);
             return new CoursesResponse(coursesProvider.getCurrentlyTaughtCourses(timeProvider.getYear(),
                                                                                  timeProvider.getMonthValue()));
         } catch (HttpException exception) {
