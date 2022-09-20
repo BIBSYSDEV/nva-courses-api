@@ -22,23 +22,23 @@ import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, CoursesResponse> {
 
-    /* default */ static final String FS_CONFIG_SECRET_NAME = "fs-config";
+    /* default */ static final String FS_CONFIG_SECRET_NAME_ENV_KEY = "FS_CONFIG_SECRET_NAME";
     /* default */ static final String FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON = "FS configuration from secrets manager "
                                                                               + "does not contain properly formatted "
                                                                               + "JSON!";
 
     private final TimeProvider timeProvider;
     private final SecretsReader secretsReader;
+    private final Environment environment = new Environment();
 
     @JacocoGenerated
     public CoursesByInstitutionOfLoggedInUserHandler() {
-        this(new Environment(), SecretsReader.defaultSecretsManagerClient(), Clock.system(ZoneId.systemDefault()));
+        this(SecretsReader.defaultSecretsManagerClient(), Clock.system(ZoneId.systemDefault()));
     }
 
-    public CoursesByInstitutionOfLoggedInUserHandler(final Environment environment,
-                                                     final SecretsManagerClient secretsManagerClient,
+    public CoursesByInstitutionOfLoggedInUserHandler(final SecretsManagerClient secretsManagerClient,
                                                      final Clock clock) {
-        super(Void.class, environment);
+        super(Void.class);
         this.timeProvider = new TimeProvider(clock);
         this.secretsReader = new SecretsReader(secretsManagerClient);
     }
@@ -61,7 +61,8 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
     }
 
     private CoursesResponse fetchInstitutionCourses(int institutionCode) throws ApiGatewayException {
-        var fsConfigAsString = secretsReader.fetchPlainTextSecret(FS_CONFIG_SECRET_NAME);
+        var fsConfigSecretName = environment.readEnv(FS_CONFIG_SECRET_NAME_ENV_KEY);
+        var fsConfigAsString = secretsReader.fetchPlainTextSecret(fsConfigSecretName);
         try {
             var fsConfig = parseFsConfigJson(fsConfigAsString);
             var institution = fetchInstitutionConfig(fsConfig, institutionCode);

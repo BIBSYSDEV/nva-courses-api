@@ -8,6 +8,7 @@ import static com.google.common.net.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static com.google.common.net.HttpHeaders.AUTHORIZATION;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static no.sikt.nva.fs.CoursesByInstitutionOfLoggedInUserHandler.FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON;
+import static no.sikt.nva.fs.CoursesByInstitutionOfLoggedInUserHandler.FS_CONFIG_SECRET_NAME_ENV_KEY;
 import static no.sikt.nva.fs.TestConfig.restApiMapper;
 import static no.sikt.nva.fs.client.HttpStatusException.UNEXPECTED_RESPONSE_CODE_RETURNED_BY_SERVER_MESSAGE;
 import static no.sikt.nva.fs.client.HttpUrlConnectionFsClient.PROBLEMS_COMMUNICATING_WITH_SERVER_MESSAGE;
@@ -21,7 +22,6 @@ import static org.hamcrest.collection.IsMapContaining.hasKey;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -37,7 +37,6 @@ import java.time.Instant;
 import java.util.List;
 import no.unit.nva.stubs.FakeSecretsManagerClient;
 import no.unit.nva.testutils.HandlerRequestBuilder;
-import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.GatewayResponse;
 import nva.commons.core.Environment;
 import nva.commons.core.ioutils.IoUtils;
@@ -51,12 +50,11 @@ import org.zalando.problem.Problem;
 @WireMockTest
 class CoursesByInstitutionOfLoggedInUserHandlerTest {
 
-    private static final String FS_CONFIG_SECRET_NAME = "fs-config";
     public static final Clock AFTER_SUMMER = Clock.fixed(Instant.parse("2022-08-10T10:15:30.00Z"),
                                                          TimeProvider.ZONE_ID);
     public static final Clock BEFORE_SUMMER = Clock.fixed(Instant.parse("2022-03-10T00:00:00.00Z"),
                                                           TimeProvider.ZONE_ID);
-    private static final String EXAMPLE_COM_URI = "http://example.com";
+    private static final String EXAMPLE_COM_URI = "https://example.com";
     private static final String NON_SUPPORTED_INSTITUTION_PATH = "100.0.0.0.0";
     private static final String SUPPORTED_INSTITUTION_PATH = "215.0.0.0.0";
     private static final String TAUGHT_COURSES_URL_PATH = "/undervisning";
@@ -74,16 +72,14 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     private static final Course COURSE_A_SPRING_2023 = new Course("A", "V\u00C5R", 2023); // VÅR
     private static final Course COURSE_OE_SPRING_2023 = new Course("\u00D8", "V\u00C5R", 2023); // Ø, VÅR
     private static final Course COURSE_AA_SPRING_2023 = new Course("\u00C5", "V\u00C5R", 2023); // Å, VÅR
-    final Environment environment = mock(Environment.class);
     private Context context;
     private CoursesByInstitutionOfLoggedInUserHandler handler;
     private ByteArrayOutputStream output;
     private FakeSecretsManagerClient fakeSecretsManagerClient;
+    private final static String SECRET_NAME = new Environment().readEnv(FS_CONFIG_SECRET_NAME_ENV_KEY);
 
     @BeforeEach
     public void init(final WireMockRuntimeInfo wmRuntimeInfo) {
-        when(environment.readEnv(ApiGatewayHandler.ALLOWED_ORIGIN_ENV)).thenReturn("*");
-
         context = mock(Context.class);
         output = new ByteArrayOutputStream();
 
@@ -91,18 +87,17 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         final String fsConfigString = IoUtils.stringFromResources(Path.of("fsConfig.json"))
                                           .replace("@@BASE_URI@@", fsBaseUri);
         fakeSecretsManagerClient = new FakeSecretsManagerClient();
-        fakeSecretsManagerClient.putPlainTextSecret(FS_CONFIG_SECRET_NAME, fsConfigString);
+        fakeSecretsManagerClient.putPlainTextSecret(SECRET_NAME, fsConfigString);
     }
 
     @Test
     void shouldReturnInternalServerErrorAndLogsWhenFsConfigSecretIsNotProperlyFormattedJson() throws IOException {
-        fakeSecretsManagerClient.putPlainTextSecret(FS_CONFIG_SECRET_NAME, EMPTY_STRING);
+        fakeSecretsManagerClient.putPlainTextSecret(SECRET_NAME, EMPTY_STRING);
 
         final InputStream input = createRequest(SUPPORTED_INSTITUTION_PATH);
         var appender = LogUtils.getTestingAppenderForRootLogger();
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     fakeSecretsManagerClient,
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
         handler.handleRequest(input, output, context);
 
@@ -124,11 +119,10 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         // we override port of wiremock to simulate FS unavailability:
         var fsConfigStringTemplate = IoUtils.stringFromResources(Path.of("fsConfig.json"));
         var fsConfigJsonAsString = fsConfigStringTemplate.replace("@@BASE_URI@@", "http://localhost:9090");
-        fakeSecretsManagerClient.putPlainTextSecret(FS_CONFIG_SECRET_NAME, fsConfigJsonAsString);
+        fakeSecretsManagerClient.putPlainTextSecret(SECRET_NAME, fsConfigJsonAsString);
 
         var appender = LogUtils.getTestingAppenderForRootLogger();
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     fakeSecretsManagerClient,
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -157,8 +151,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
 
         var appender = LogUtils.getTestingAppenderForRootLogger();
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     fakeSecretsManagerClient,
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -188,8 +181,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
 
         final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     fakeSecretsManagerClient,
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -215,8 +207,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         // prepare:
         final InputStream input = createRequest(NON_SUPPORTED_INSTITUTION_PATH);
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     fakeSecretsManagerClient,
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -236,8 +227,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         // prepare:
         final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper).build();
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     fakeSecretsManagerClient,
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -260,8 +250,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         stubRequestForCourses(2022, IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2022.json")));
         stubRequestForCourses(2023, IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2023.json")));
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     fakeSecretsManagerClient,
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -291,8 +280,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         final String responseBody = IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2022.json"));
         stubRequestForCourses(2022, responseBody);
 
-        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     fakeSecretsManagerClient,
+        this.handler = new CoursesByInstitutionOfLoggedInUserHandler(fakeSecretsManagerClient,
                                                                      BEFORE_SUMMER);
 
         // execute:
