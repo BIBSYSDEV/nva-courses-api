@@ -44,7 +44,6 @@ import nva.commons.core.ioutils.IoUtils;
 import nva.commons.core.paths.UriWrapper;
 import nva.commons.logutils.LogUtils;
 import nva.commons.logutils.TestAppender;
-import nva.commons.secrets.SecretsReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
@@ -85,13 +84,10 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     public void init(final WireMockRuntimeInfo wmRuntimeInfo) {
         when(environment.readEnv(ApiGatewayHandler.ALLOWED_ORIGIN_ENV)).thenReturn("*");
 
-        final String fsBaseUri = UriWrapper.fromUri(wmRuntimeInfo.getHttpBaseUrl()).toString();
-        when(environment.readEnv(CoursesByInstitutionOfLoggedInUserHandler.FS_CONFIG_SECRET_NAME_ENV_NAME))
-            .thenReturn(FS_CONFIG_SECRET_NAME);
-
         context = mock(Context.class);
         output = new ByteArrayOutputStream();
 
+        final String fsBaseUri = UriWrapper.fromUri(wmRuntimeInfo.getHttpBaseUrl()).toString();
         final String fsConfigString = IoUtils.stringFromResources(Path.of("fsConfig.json"))
                                           .replace("@@BASE_URI@@", fsBaseUri);
         fakeSecretsManagerClient = new FakeSecretsManagerClient();
@@ -106,7 +102,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         var appender = LogUtils.getTestingAppenderForRootLogger();
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
         handler.handleRequest(input, output, context);
 
@@ -132,7 +128,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
 
         var appender = LogUtils.getTestingAppenderForRootLogger();
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -162,7 +158,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         var appender = LogUtils.getTestingAppenderForRootLogger();
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -193,7 +189,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         final TestAppender appender = LogUtils.getTestingAppenderForRootLogger();
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -220,7 +216,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         final InputStream input = createRequest(NON_SUPPORTED_INSTITUTION_PATH);
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -241,7 +237,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         final InputStream input = new HandlerRequestBuilder<Void>(restApiMapper).build();
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -265,7 +261,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         stubRequestForCourses(2023, IoUtils.stringFromResources(Path.of("oslometUndervisningResponse2023.json")));
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     fakeSecretsManagerClient,
                                                                      AFTER_SUMMER);
 
         // execute:
@@ -296,7 +292,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
         stubRequestForCourses(2022, responseBody);
 
         this.handler = new CoursesByInstitutionOfLoggedInUserHandler(environment,
-                                                                     new SecretsReader(fakeSecretsManagerClient),
+                                                                     fakeSecretsManagerClient,
                                                                      BEFORE_SUMMER);
 
         // execute:

@@ -18,10 +18,11 @@ import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.paths.UriWrapper;
 import nva.commons.secrets.SecretsReader;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler<Void, CoursesResponse> {
 
-    /* default */ static final String FS_CONFIG_SECRET_NAME_ENV_NAME = "FsConfigSecretName";
+    /* default */ static final String FS_CONFIG_SECRET_NAME = "fs-config";
     /* default */ static final String FS_CONFIG_NOT_PROPERLY_FORMATTED_JSON = "FS configuration from secrets manager "
                                                                               + "does not contain properly formatted "
                                                                               + "JSON!";
@@ -31,15 +32,15 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
 
     @JacocoGenerated
     public CoursesByInstitutionOfLoggedInUserHandler() {
-        this(new Environment(), new SecretsReader(), Clock.system(ZoneId.systemDefault()));
+        this(new Environment(), SecretsReader.defaultSecretsManagerClient(), Clock.system(ZoneId.systemDefault()));
     }
 
     public CoursesByInstitutionOfLoggedInUserHandler(final Environment environment,
-                                                     final SecretsReader secretsReader,
+                                                     final SecretsManagerClient secretsManagerClient,
                                                      final Clock clock) {
         super(Void.class, environment);
         this.timeProvider = new TimeProvider(clock);
-        this.secretsReader = secretsReader;
+        this.secretsReader = new SecretsReader(secretsManagerClient);
     }
 
     @Override
@@ -60,8 +61,7 @@ public class CoursesByInstitutionOfLoggedInUserHandler extends ApiGatewayHandler
     }
 
     private CoursesResponse fetchInstitutionCourses(int institutionCode) throws ApiGatewayException {
-        var fsConfigSecretName = environment.readEnv(FS_CONFIG_SECRET_NAME_ENV_NAME);
-        var fsConfigAsString = secretsReader.fetchPlainTextSecret(fsConfigSecretName);
+        var fsConfigAsString = secretsReader.fetchPlainTextSecret(FS_CONFIG_SECRET_NAME);
         try {
             var fsConfig = parseFsConfigJson(fsConfigAsString);
             var institution = fetchInstitutionConfig(fsConfig, institutionCode);
