@@ -76,7 +76,7 @@ class CoursesByInstitutionOfLoggedInUserHandlerTest {
     private CoursesByInstitutionOfLoggedInUserHandler handler;
     private ByteArrayOutputStream output;
     private FakeSecretsManagerClient fakeSecretsManagerClient;
-    private final static String SECRET_NAME = new Environment().readEnv(FS_CONFIG_SECRET_NAME_ENV_KEY);
+    private static final String SECRET_NAME = new Environment().readEnv(FS_CONFIG_SECRET_NAME_ENV_KEY);
 
     @BeforeEach
     public void init(final WireMockRuntimeInfo wmRuntimeInfo) {
